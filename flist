@@ -27,6 +27,7 @@ execute/AgenLsu.sv
 execute/Complex_ALU.sv
 execute/Ctrl_ALU.sv
 execute/Demux.sv
+execute/divfunc.v
 execute/Execute_Ctrl.sv
 execute/Execute_M.sv
 execute/Execute_SC.sv
@@ -36,6 +37,8 @@ execute/ExecutionPipe_SC.sv
 execute/FP_ALU.sv
 execute/ForwardCheck.sv
 execute/Mux.sv
+execute/shift_pipe.sv
+execute/SignedDivide.sv
 execute/Simple_ALU.sv
 fetch/BTB.sv
 fetch/BranchPrediction_2-bit.sv
@@ -145,18 +148,4 @@ retire/ArchMapTable.sv
 writeback/Writeback_Ctrl.sv
 writeback/Writeback_M.sv
 writeback/Writeback_SC.sv
-+incdir+$DESIGNWARE_PATH/sim_ver/
-$DESIGNWARE_PATH/sim_ver/DW03_pipe_reg.v
-$DESIGNWARE_PATH/sim_ver/DW_mult_pipe.v
-$DESIGNWARE_PATH/sim_ver/DW_div_pipe.v
-$DESIGNWARE_PATH/sim_ver/DW_fp_add.v
-$DESIGNWARE_PATH/sim_ver/DW_fp_sub.v
-$DESIGNWARE_PATH/sim_ver/DW02_mult.v
-$DESIGNWARE_PATH/sim_ver/DW_div.v
-$DESIGNWARE_PATH/sim_ver/DW_fp_addsub.v
-$DESIGNWARE_PATH/sim_ver/DW_fp_mult.v
-$DESIGNWARE_PATH/sim_ver/DW_fp_div.v
-$DESIGNWARE_PATH/sim_ver/DW_fp_sqrt.v
-$DESIGNWARE_PATH/sim_ver/DW_fp_flt2i.v
-$DESIGNWARE_PATH/sim_ver/DW_fp_cmp.v
-/usr/licensed/synopsys/syn_vN-2017.09-SP4/dw/sim_ver/DW_fp_i2flt.v
+
