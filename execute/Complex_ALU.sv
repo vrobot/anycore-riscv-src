@@ -51,10 +51,22 @@ wire signed [`SIZE_DATA-1:0]        data1_s;
 wire signed [`SIZE_DATA-1:0]        data2_s;
 /* reg         [`SIZE_DATA-1:0]        result; */
 /* logic       [`SIZE_DATA-1:0]        shiftResultOut; */
+`ifdef USE_DESIGNWARE
+logic       [`SIZE_DATA-1:0]        signedProduct_l;
+logic       [`SIZE_DATA-1:0]        signedProduct_h;
+logic       [`SIZE_DATA-1:0]        unsignedProduct_l;
+logic       [`SIZE_DATA-1:0]        unsignedProduct_h;
+logic       [`SIZE_DATA-1:0]        signedQuotient;
+logic       [`SIZE_DATA-1:0]        signedRemainder;
+logic       [`SIZE_DATA-1:0]        unsignedQuotient;
+logic       [`SIZE_DATA-1:0]        unsignedRemainder;
+`endif
+`ifndef USE_DESIGNWARE
 logic       [`SIZE_DATA-1:0]        product_l;
 logic       [`SIZE_DATA-1:0]        product_h;
 logic       [`SIZE_DATA-1:0]        quotient;
 logic       [`SIZE_DATA-1:0]        remainder;
+`endif
 logic       [`SIZE_DATA-1:0]        divisor;
 exeFlgs                             flags;
 exeFlgs                             shiftFlagsOut;
@@ -63,11 +75,22 @@ logic [3:0]                         resultTypeShifted;
 logic                               fuEnabled;
 
 logic                               toggleFlag;
-
+`ifdef USE_DESIGNWARE
+localparam SIGNED_PRODUCT_L     = 4'h0;
+localparam SIGNED_PRODUCT_H     = 4'h1;
+localparam UNSIGNED_PRODUCT_L   = 4'h2;
+localparam UNSIGNED_PRODUCT_H   = 4'h3;
+localparam SIGNED_QUOTIENT      = 4'h4;
+localparam SIGNED_REMAINDER     = 4'h5;
+localparam UNSIGNED_QUOTIENT    = 4'h6;
+localparam UNSIGNED_REMAINDER   = 4'h7;
+`endif
+`ifndef USE_DESIGNWARE
 localparam PRODUCT_L     = 4'h0;
 localparam PRODUCT_H     = 4'h1;
 localparam QUOTIENT      = 4'h4;
 localparam REMAINDER     = 4'h5;
+`endif
 localparam TOGGLE               = 4'h8;
 localparam SIGNED_EXT_PRODUCT_L = 4'h9;	//Changes: Mohit (MULW)
 localparam SIGNED_EXT_QUOTIENT      = 4'ha; //Changes: Mohit (DIVW)
@@ -185,16 +208,35 @@ begin
         wbPacket_o.flags    = shiftFlagsOut;
         wbPacket_o.valid    = shiftPacketOut.valid;
         case (resultTypeShifted)
+`ifdef USE_DESIGNWARE
+            SIGNED_PRODUCT_L:   wbPacket_o.destData = signedProduct_l;
+            SIGNED_PRODUCT_H:   wbPacket_o.destData = signedProduct_h;
+            UNSIGNED_PRODUCT_L: wbPacket_o.destData = unsignedProduct_l;
+            UNSIGNED_PRODUCT_H: wbPacket_o.destData = unsignedProduct_h;
+            SIGNED_QUOTIENT:    wbPacket_o.destData = signedQuotient;
+            SIGNED_REMAINDER:   wbPacket_o.destData = signedRemainder;
+            UNSIGNED_QUOTIENT:  wbPacket_o.destData = unsignedQuotient;
+            UNSIGNED_REMAINDER: wbPacket_o.destData = unsignedRemainder;
+`else
             PRODUCT_L:              wbPacket_o.destData = product_l;
             PRODUCT_H:              wbPacket_o.destData = product_h;
             QUOTIENT:        wbPacket_o.destData = quotient;
             REMAINDER:       wbPacket_o.destData = remainder;
+`endif
             TOGGLE            : wbPacket_o.destData = 0;
+`ifdef USE_DESIGNWARE
+            SIGNED_EXT_PRODUCT_L:   wbPacket_o.destData = {{32{signedProduct_l[31]}},signedProduct_l[31:0]};	// Result: MULW
+            SIGNED_EXT_QUOTIENT:    wbPacket_o.destData = {{32{signedQuotient[31]}},signedQuotient[31:0]};	// Result: DIVW
+            SIGNED_EXT_REMAINDER:   wbPacket_o.destData = {{32{signedRemainder[31]}},signedRemainder[31:0]};    // Result: REMW
+            UNSIGNED_EXT_QUOTIENT:  wbPacket_o.destData = {{32{1'b0}},unsignedQuotient[31:0]};			// Result: DIVUW
+            UNSIGNED_EXT_REMAINDER: wbPacket_o.destData = {{32{1'b0}},unsignedRemainder[31:0]}; // Result: REMUW
+`else
             SIGNED_EXT_PRODUCT_L:   wbPacket_o.destData = {{32{product_l[31]}}, product_l[31:0]};   // Result: MULW
             SIGNED_EXT_QUOTIENT:    wbPacket_o.destData = {{32{quotient[31]}},quotient[31:0]};	    // Result: DIVW
             SIGNED_EXT_REMAINDER:   wbPacket_o.destData = {{32{remainder[31]}},remainder[31:0]};    // Result: REMW
             UNSIGNED_EXT_QUOTIENT:  wbPacket_o.destData = {{32{quotient[31]}},quotient[31:0]};      // Result: DIVUW
             UNSIGNED_EXT_REMAINDER: wbPacket_o.destData = {{32{remainder[31]}},remainder[31:0]};    // Result: REMUW
+`endif
             default           : wbPacket_o.destData = 0;
         endcase
     end
@@ -258,6 +300,11 @@ begin:ALU_OPERATION
                             flags.executed          = 1'h1;
                             flags.destValid         = exePacket_i.phyDestValid;
                             resultType              = PRODUCT_L;
+                            `ifdef USE_DESIGNWARE
+                            resultType              = SIGNED_PRODUCT_L;
+                            `else
+                            resultType              = PRODUCT_L;
+                            `endif
                             sign_a                  = 1'b1;
                             sign_b                  = 1'b1;
                          end
@@ -266,24 +313,36 @@ begin:ALU_OPERATION
                          begin
                             flags.executed          = 1'h1;
                             flags.destValid         = exePacket_i.phyDestValid;
+                            `ifdef USE_DESIGNWARE
+                            resultType              = SIGNED_PRODUCT_H;
+                            `else
                             resultType              = PRODUCT_H;
+                            `endif
                             sign_a                  = 1'b1;
                             sign_b                  = 1'b1;
                          end
 
-                        `FN3_MULHSU:  //TODO: Not Correct implementation
+                        `FN3_MULHSU:
                          begin
                             flags.executed          = 1'h1;
                             flags.destValid         = exePacket_i.phyDestValid;
+                            `ifdef USE_DESIGNWARE
+                            resultType              = UNSIGNED_PRODUCT_H;
+                            `else
                             resultType              = PRODUCT_H;
+                            `endif
                             sign_a                  = 1'b1;
                          end
 
-                        `FN3_MULHU:  //TODO: Not Correct implementation
+                        `FN3_MULHU:
                          begin
                             flags.executed          = 1'h1;
                             flags.destValid         = exePacket_i.phyDestValid;
+                            `ifdef USE_DESIGNWARE
+                            resultType              = UNSIGNED_PRODUCT_H;
+                            `else
                             resultType              = PRODUCT_H;
+                            `endif
                          end
 
                         `FN3_DIV:
@@ -298,7 +357,11 @@ begin:ALU_OPERATION
                             /* result                  = result1_s; */
                             flags.executed          = 1'h1;
                             flags.destValid         = exePacket_i.phyDestValid;
+                            `ifdef USE_DESIGNWARE
+                            resultType              = SIGNED_QUOTIENT;
+                            `else
                             resultType              = QUOTIENT;
+                            `endif
                             sign_a                  = 1'b1;
                             sign_b                  = 1'b1;
                             divisor                 = data2_i;
@@ -314,7 +377,11 @@ begin:ALU_OPERATION
                             /* result                  = result1; */
                             flags.executed          = 1'h1;
                             flags.destValid         = exePacket_i.phyDestValid;
+                            `ifdef USE_DESIGNWARE
+                            resultType              = UNSIGNED_QUOTIENT;
+                            `else
                             resultType              = QUOTIENT;
+                            `endif
                             divisor                 = data2_i;
                          end
 
@@ -331,7 +398,11 @@ begin:ALU_OPERATION
                             /* result                  = result2_s; */
                             flags.executed          = 1'h1;
                             flags.destValid         = exePacket_i.phyDestValid;
+                            `ifdef USE_DESIGNWARE
+                            resultType              = SIGNED_REMAINDER;
+                            `else
                             resultType              = REMAINDER;
+                            `endif
                             divisor                 = data2_i;
                             sign_a                  = 1'b1;
                             sign_b                  = 1'b1;
@@ -347,7 +418,11 @@ begin:ALU_OPERATION
                             /* result                  = result2; */
                             flags.executed          = 1'h1;
                             flags.destValid         = exePacket_i.phyDestValid;
+                            `ifdef USE_DESIGNWARE
+                            resultType              = UNSIGNED_REMAINDER;
+                            `else
                             resultType              = REMAINDER;
+                            `endif
                             divisor                 = data2_i;
                         end
                     endcase //case (fn3)
