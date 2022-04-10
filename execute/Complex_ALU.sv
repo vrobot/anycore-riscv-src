@@ -84,8 +84,7 @@ localparam SIGNED_QUOTIENT      = 4'h4;
 localparam SIGNED_REMAINDER     = 4'h5;
 localparam UNSIGNED_QUOTIENT    = 4'h6;
 localparam UNSIGNED_REMAINDER   = 4'h7;
-`endif
-`ifndef USE_DESIGNWARE
+`else //ifdef USE_DESIGNWARE
 localparam PRODUCT_L     = 4'h0;
 localparam PRODUCT_H     = 4'h1;
 localparam QUOTIENT      = 4'h4;
@@ -217,7 +216,7 @@ begin
             SIGNED_REMAINDER:   wbPacket_o.destData = signedRemainder;
             UNSIGNED_QUOTIENT:  wbPacket_o.destData = unsignedQuotient;
             UNSIGNED_REMAINDER: wbPacket_o.destData = unsignedRemainder;
-`else
+`else //ifdef USE_DESIGNWARE
             PRODUCT_L:              wbPacket_o.destData = product_l;
             PRODUCT_H:              wbPacket_o.destData = product_h;
             QUOTIENT:        wbPacket_o.destData = quotient;
@@ -230,7 +229,8 @@ begin
             SIGNED_EXT_REMAINDER:   wbPacket_o.destData = {{32{signedRemainder[31]}},signedRemainder[31:0]};    // Result: REMW
             UNSIGNED_EXT_QUOTIENT:  wbPacket_o.destData = {{32{1'b0}},unsignedQuotient[31:0]};			// Result: DIVUW
             UNSIGNED_EXT_REMAINDER: wbPacket_o.destData = {{32{1'b0}},unsignedRemainder[31:0]}; // Result: REMUW
-`else
+`else //ifdef USE_DESIGNWARE
+
             SIGNED_EXT_PRODUCT_L:   wbPacket_o.destData = {{32{product_l[31]}}, product_l[31:0]};   // Result: MULW
             SIGNED_EXT_QUOTIENT:    wbPacket_o.destData = {{32{quotient[31]}},quotient[31:0]};	    // Result: DIVW
             SIGNED_EXT_REMAINDER:   wbPacket_o.destData = {{32{remainder[31]}},remainder[31:0]};    // Result: REMW
@@ -299,10 +299,9 @@ begin:ALU_OPERATION
                          begin
                             flags.executed          = 1'h1;
                             flags.destValid         = exePacket_i.phyDestValid;
-                            resultType              = PRODUCT_L;
                             `ifdef USE_DESIGNWARE
                             resultType              = SIGNED_PRODUCT_L;
-                            `else
+                            `else //ifdef USE_DESIGNWARE
                             resultType              = PRODUCT_L;
                             `endif
                             sign_a                  = 1'b1;
@@ -315,7 +314,7 @@ begin:ALU_OPERATION
                             flags.destValid         = exePacket_i.phyDestValid;
                             `ifdef USE_DESIGNWARE
                             resultType              = SIGNED_PRODUCT_H;
-                            `else
+                            `else //ifdef USE_DESIGNWARE
                             resultType              = PRODUCT_H;
                             `endif
                             sign_a                  = 1'b1;
@@ -328,7 +327,7 @@ begin:ALU_OPERATION
                             flags.destValid         = exePacket_i.phyDestValid;
                             `ifdef USE_DESIGNWARE
                             resultType              = UNSIGNED_PRODUCT_H;
-                            `else
+                            `else //ifdef USE_DESIGNWARE
                             resultType              = PRODUCT_H;
                             `endif
                             sign_a                  = 1'b1;
@@ -340,7 +339,7 @@ begin:ALU_OPERATION
                             flags.destValid         = exePacket_i.phyDestValid;
                             `ifdef USE_DESIGNWARE
                             resultType              = UNSIGNED_PRODUCT_H;
-                            `else
+                            `else //ifdef USE_DESIGNWARE
                             resultType              = PRODUCT_H;
                             `endif
                          end
@@ -359,7 +358,7 @@ begin:ALU_OPERATION
                             flags.destValid         = exePacket_i.phyDestValid;
                             `ifdef USE_DESIGNWARE
                             resultType              = SIGNED_QUOTIENT;
-                            `else
+                            `else //ifdef USE_DESIGNWARE
                             resultType              = QUOTIENT;
                             `endif
                             sign_a                  = 1'b1;
@@ -379,7 +378,7 @@ begin:ALU_OPERATION
                             flags.destValid         = exePacket_i.phyDestValid;
                             `ifdef USE_DESIGNWARE
                             resultType              = UNSIGNED_QUOTIENT;
-                            `else
+                            `else //ifdef USE_DESIGNWARE
                             resultType              = QUOTIENT;
                             `endif
                             divisor                 = data2_i;
@@ -400,7 +399,7 @@ begin:ALU_OPERATION
                             flags.destValid         = exePacket_i.phyDestValid;
                             `ifdef USE_DESIGNWARE
                             resultType              = SIGNED_REMAINDER;
-                            `else
+                            `else //ifdef USE_DESIGNWARE
                             resultType              = REMAINDER;
                             `endif
                             divisor                 = data2_i;
@@ -420,7 +419,7 @@ begin:ALU_OPERATION
                             flags.destValid         = exePacket_i.phyDestValid;
                             `ifdef USE_DESIGNWARE
                             resultType              = UNSIGNED_REMAINDER;
-                            `else
+                            `else //ifdef USE_DESIGNWARE
                             resultType              = REMAINDER;
                             `endif
                             divisor                 = data2_i;
@@ -649,9 +648,7 @@ DW_div_pipe #(
     .divide_by_0    () 
 );
 
-`endif
-
-`ifndef USE_DESIGNWARE
+`else //`ifdef USE_DESIGNWARE
 
 shift_pipe #(
     .WIDTH(`FU_PKT_SIZE),
