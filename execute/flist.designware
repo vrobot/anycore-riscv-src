@@ -1,0 +1,15 @@
++incdir+$DESIGNWARE_PATH/sim_ver/
+$DESIGNWARE_PATH/sim_ver/DW03_pipe_reg.v
+$DESIGNWARE_PATH/sim_ver/DW_mult_pipe.v
+$DESIGNWARE_PATH/sim_ver/DW_div_pipe.v
+$DESIGNWARE_PATH/sim_ver/DW_fp_add.v
+$DESIGNWARE_PATH/sim_ver/DW_fp_sub.v
+$DESIGNWARE_PATH/sim_ver/DW02_mult.v
+$DESIGNWARE_PATH/sim_ver/DW_div.v
+$DESIGNWARE_PATH/sim_ver/DW_fp_addsub.v
+$DESIGNWARE_PATH/sim_ver/DW_fp_mult.v
+$DESIGNWARE_PATH/sim_ver/DW_fp_div.v
+$DESIGNWARE_PATH/sim_ver/DW_fp_sqrt.v
+$DESIGNWARE_PATH/sim_ver/DW_fp_flt2i.v
+$DESIGNWARE_PATH/sim_ver/DW_fp_cmp.v
+$DESIGNWARE_PATH/sim_ver/DW_fp_i2flt.v

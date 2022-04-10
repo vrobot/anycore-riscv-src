@@ -3,6 +3,7 @@ AgenLsu.sv
 Complex_ALU.sv
 Ctrl_ALU.sv
 Demux.sv
+divfunc.v
 Execute_Ctrl.sv
 Execute_M.sv
 Execute_SC.sv
@@ -12,6 +13,7 @@ ExecutionPipe_SC.sv
 FP_ALU.sv
 ForwardCheck.sv
 Mux.sv
+SignedDivide.sv
 Simple_ALU.sv
 ppa_execute_ctrl.sv
 ppa_execute_m.sv
