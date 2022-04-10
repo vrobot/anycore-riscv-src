@@ -12,4 +12,4 @@ $DESIGNWARE_PATH/sim_ver/DW_fp_div.v
 $DESIGNWARE_PATH/sim_ver/DW_fp_sqrt.v
 $DESIGNWARE_PATH/sim_ver/DW_fp_flt2i.v
 $DESIGNWARE_PATH/sim_ver/DW_fp_cmp.v
-/usr/licensed/synopsys/syn_vN-2017.09-SP4/dw/sim_ver/DW_fp_i2flt.v
+$DESIGNWARE_PATH/sim_ver/DW_fp_i2flt.v
