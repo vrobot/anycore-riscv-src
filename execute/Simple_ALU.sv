@@ -122,7 +122,7 @@ begin:ALU_OPERATION
            
            `FN3_SLL:
              begin
-                result              = data1_i << data2_i[`SLL_SRL_SRA_SHAMT-1:0];
+                result              = data1_i << data2_i[`SLL_SRL_SRA_SHAMT_64-1:0];
                 flags.executed    = 1'h1;
                 flags.destValid   = exePacket_i.phyDestValid;
              end
@@ -159,12 +159,12 @@ begin:ALU_OPERATION
             case (fn7)
                 `FN7_SRL:
                  begin
-                     result              = data1_i >> data2_i[`SLL_SRL_SRA_SHAMT-1:0];
+                     result              = data1_i >> data2_i[`SLL_SRL_SRA_SHAMT_64-1:0];
                  end
                  `FN7_SRA:
                  begin
                      data_signed1        = data1_i;
-                     result              = data_signed1 >>>data2_i[`SLL_SRL_SRA_SHAMT-1:0];
+                     result              = data_signed1 >>>data2_i[`SLL_SRL_SRA_SHAMT_64-1:0];
                  end
             endcase
 
@@ -255,11 +255,12 @@ begin:ALU_OPERATION
              case (fn7 & 7'b1111110) //Must mask bit-0 as it is part of shift amount in 64-bit mode
                 `FN7_SRL:
                  begin
-                    result            = data1_i >> shift_amt; //RV64 uses 6 bits for IMM shifts
+                    result            = data1_i >> shift_amt[`SLL_SRL_SRA_SHAMT_64-1:0]; //RV64 uses 6 bits for IMM shifts
                  end
                 `FN7_SRA:
                  begin
-                    result            = data1_i >>> shift_amt; //RV64 uses 6 bits for IMM shifts
+                    data_signed1      = data1_i;
+                    result            = data_signed1 >>> shift_amt[`SLL_SRL_SRA_SHAMT_64-1:0]; //RV64 uses 6 bits for IMM shifts
                  end
                  default:
                  begin
@@ -296,11 +297,12 @@ begin:ALU_OPERATION
                     case (fn7)
                        `FN7_SRL:
                         begin
-                           result_32         = data1_i >> shift_amt; //RV64 uses 5 bits for IMM_32 shifts
+                           result_32         = data1_i >> shift_amt[`SLL_SRL_SRA_SHAMT_32-1:0]; //RV64 uses 5 bits for IMM_32 shifts
                         end
                        `FN7_SRA:
                         begin
-                           result_32         = data1_i >>> shift_amt; //RV64 uses 5 bits for IMM_32 shifts
+                           data_signed1      = data1_i;
+                           result_32         = data_signed1 >>> shift_amt[`SLL_SRL_SRA_SHAMT_32-1:0]; //RV64 uses 5 bits for IMM_32 shifts
                         end
                         default:
                         begin
@@ -343,7 +345,7 @@ begin:ALU_OPERATION
            
            `FN3_SLL:
              begin
-                result_32         = data1_i << data2_i[`SLL_SRL_SRA_SHAMT-1:0];
+                result_32         = data1_i << data2_i[`SLL_SRL_SRA_SHAMT_32-1:0];
                 result            = {{32{result_32[31]}},result_32[31:0]};
                 flags.executed    = 1'h1;
                 flags.destValid   = exePacket_i.phyDestValid;
@@ -354,13 +356,13 @@ begin:ALU_OPERATION
             case (fn7)
                 `FN7_SRL:
                  begin
-                     result_32              = data1_i >> data2_i[`SLL_SRL_SRA_SHAMT-1:0];
+                     result_32              = data1_i >> data2_i[`SLL_SRL_SRA_SHAMT_32-1:0];
                      result    = {{32{result_32[31]}},result_32[31:0]};
                  end
                  `FN7_SRA:
                  begin
                      data_signed1           = data1_i;
-                     result_32              = data_signed1 >>> data2_i[`SLL_SRL_SRA_SHAMT-1:0];
+                     result_32              = data_signed1 >>> data2_i[`SLL_SRL_SRA_SHAMT_32-1:0];
                      result    = {{32{result_32[31]}},result_32[31:0]};
                  end
                  default:

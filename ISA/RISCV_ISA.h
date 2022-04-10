@@ -54,7 +54,8 @@
 //`define IMM_U_SHIFT  12
 //`define IMM_UJ_SHIFT 1
 
-`define SLL_SRL_SRA_SHAMT 7
+`define SLL_SRL_SRA_SHAMT_64 6
+`define SLL_SRL_SRA_SHAMT_32 5
 
 `define SIZE_S_SIG 23
 `define SIZE_S_EXP 8
