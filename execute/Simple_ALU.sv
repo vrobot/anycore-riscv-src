@@ -62,6 +62,7 @@ always_comb
 begin:ALU_OPERATION
     reg         [`SIZE_DATA-1:0]              sign_ex_immd;
     reg signed  [`SIZE_DATA-1:0]              data_signed1;
+    reg signed  [31:0]                        data_signed32;
     reg         [`SIZE_DATA-1:0]              shift_amt;
     reg         [`SIZE_OPCODE_P-1:0]          opcode;
     reg         [`FUNCT3_HI-`FUNCT3_LO:0]     fn3;
@@ -297,12 +298,12 @@ begin:ALU_OPERATION
                     case (fn7)
                        `FN7_SRL:
                         begin
-                           result_32         = data1_i >> shift_amt[`SLL_SRL_SRA_SHAMT_32-1:0]; //RV64 uses 5 bits for IMM_32 shifts
+                           result_32         = data1_i[31:0] >> shift_amt[`SLL_SRL_SRA_SHAMT_32-1:0]; //RV64 uses 5 bits for IMM_32 shifts
                         end
                        `FN7_SRA:
                         begin
-                           data_signed1      = data1_i;
-                           result_32         = data_signed1 >>> shift_amt[`SLL_SRL_SRA_SHAMT_32-1:0]; //RV64 uses 5 bits for IMM_32 shifts
+                           data_signed32     = data1_i[31:0];
+                           result_32         = data_signed32 >>> shift_amt[`SLL_SRL_SRA_SHAMT_32-1:0]; //RV64 uses 5 bits for IMM_32 shifts
                         end
                         default:
                         begin
@@ -356,7 +357,7 @@ begin:ALU_OPERATION
             case (fn7)
                 `FN7_SRL:
                  begin
-                     result_32              = data1_i >> data2_i[`SLL_SRL_SRA_SHAMT_32-1:0];
+                     result_32              = data1_i[31:0] >> data2_i[`SLL_SRL_SRA_SHAMT_32-1:0];
                      result    = {{32{result_32[31]}},result_32[31:0]};
                  end
                  `FN7_SRA:
