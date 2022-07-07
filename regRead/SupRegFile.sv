@@ -102,6 +102,7 @@ module SupRegFile (
 
 
 logic rv64;
+/*Original CSRs*/
 logic [`CSR_WIDTH-1:0]  csr_fflags; 
 logic [`CSR_WIDTH-1:0]  csr_frm; 
 logic [`CSR_WIDTH-1:0]  csr_fcsr;
@@ -131,6 +132,7 @@ logic [`CSR_WIDTH-1:0]  csr_instret;
 logic [`CSR_WIDTH-1:0]  csr_cycleh;
 logic [`CSR_WIDTH-1:0]  csr_timeh; 
 logic [`CSR_WIDTH-1:0]  csr_instreth;
+/* New CSRs */
 
 logic                        wr_csr_fflags    ;
 logic                        wr_csr_frm       ;
@@ -481,6 +483,7 @@ begin
     12'hc80:regRdData_o   =  csr_cycleh    ;
     12'hc81:regRdData_o   =  csr_timeh     ;
     12'hc82:regRdData_o   =  csr_instreth  ;
+    `CSR_MHARTID:regRdData_o = `CSR_WIDTH'b0;
     default:regRdData_o   =  `CSR_WIDTH'bx;
   endcase  
 end
