@@ -343,7 +343,7 @@
 
 
 `define CSR_STATUS_MASK   (64'h00000000ffffffff & ~`SR_EA & ~`SR_ZERO)
-`define CSR_FFLAGS_MASK   64'h00000000ffffffff
+`define CSR_FFLAGS_MASK   64'h000000000000001f
 `define CSR_FRM_MASK      64'h00000000ffffffff
 `define CSR_COMPARE_MASK  64'h00000000ffffffff
 

@@ -92,19 +92,11 @@ module SupRegFile (
 //`define RISCV_PGSHIFT       13
 //`define RISCV_PGLEVEL_BITS  10
 //`define RISCV_PGSIZE        (1 << `RISCV_PGSHIFT)
-//
-//
-//localparam [`CSR_WIDTH-1:0] CSR_STATUS_MASK  = (64'h00000000ffffffff & ~`SR_EA & ~`SR_ZERO);
-//`define CSR_FFLAGS_MASK   64'h00000000ffffffff
-//`define CSR_FRM_MASK      64'h00000000ffffffff
-//`define CSR_COMPARE_MASK  64'h00000000ffffffff
 
 
 
 logic rv64;
 /*Original CSRs*/
-logic [`CSR_WIDTH-1:0]  csr_fflags; 
-logic [`CSR_WIDTH-1:0]  csr_frm; 
 logic [`CSR_WIDTH-1:0]  csr_fcsr;
 logic [`CSR_WIDTH-1:0]  csr_stats;
 logic [`CSR_WIDTH-1:0]  csr_sup0; 
@@ -189,7 +181,7 @@ assign interruptPending_o = (|interrupts) & (|(csr_status & `SR_EI)); //If inter
 assign csr_evec_o = csr_evec;
 assign csr_epc_o  = csr_epc;
 assign csr_status_o  = csr_status;	//Changes: Mohit
-assign csr_frm_o  = csr_frm;	//Changes: Mohit
+assign csr_frm_o  = {{`CSR_WIDTH-3{1'b0}}, csr_fcsr[7:5]};
 
 // Checkpoint the CSR address and Data read
 // by a CSR instruction to verify the atomic
@@ -304,9 +296,9 @@ begin
   if(commitReg_i && regWrValid) //Changes: Mohit Disables reg commit write after flush
   begin
     case(regWrAddrCommit)
-      12'h001:wr_csr_fflags    = 1'b1; 
-      12'h002:wr_csr_frm       = 1'b1; 
-      12'h003:wr_csr_fcsr      = 1'b1; 
+      `CSR_FFLAGS      :wr_csr_fflags    = 1'b1;
+      `CSR_FRM         :wr_csr_frm       = 1'b1;
+      `CSR_FCSR        :wr_csr_fcsr      = 1'b1;
       12'h0c0:wr_csr_stats     = 1'b1; 
       12'h500:wr_csr_sup0      = 1'b1; 
       12'h501:wr_csr_sup1      = 1'b1; 
@@ -345,8 +337,6 @@ always_ff @(posedge clk or posedge reset)
 begin
   if(reset)
   begin
-    csr_fflags    <=  `CSR_WIDTH'b0;
-    csr_frm       <=  `CSR_WIDTH'b0;
     csr_fcsr      <=  `CSR_WIDTH'b0;
     csr_stats     <=  `CSR_WIDTH'b0;
     csr_sup0      <=  `CSR_WIDTH'b0;
@@ -379,10 +369,10 @@ begin
   else
   begin
     //Changes: Mohit (Update CSR_FFLAGS when floating-point instruction retire)
-    csr_fflags    <=  wr_csr_fflags    ? regWrDataCommit & `CSR_FFLAGS_MASK : (csr_fflags | (csr_fflags_i & `CSR_FFLAGS_MASK));	
-    csr_frm       <=  wr_csr_frm       ? regWrDataCommit & `CSR_FRM_MASK : csr_frm;
+    csr_fcsr      <=  wr_csr_fflags    ? {{`CSR_WIDTH-5{1'b1}},regWrDataCommit[4:0]} & csr_fcsr : (csr_fcsr | (csr_fflags_i & `CSR_FFLAGS_MASK));;
+    csr_fcsr      <=  wr_csr_frm       ? {{`CSR_WIDTH-8{1'b1}},regWrDataCommit[2:0], 5'b1} & csr_fcsr : csr_fcsr;
     //Changes: Mohit (FFLAGS is also part of FCSR register according to ISA)
-    csr_fcsr      <=  wr_csr_fcsr      ? regWrDataCommit : (csr_fcsr | (csr_fflags_i & `CSR_FFLAGS_MASK));	
+    csr_fcsr      <=  wr_csr_fcsr      ? {{`CSR_WIDTH-8{1'b1}},regWrDataCommit[7:0]} & csr_fcsr : (csr_fcsr | (csr_fflags_i & `CSR_FFLAGS_MASK));
     csr_stats     <=  wr_csr_stats     ? regWrDataCommit : csr_stats; 
     csr_sup0      <=  wr_csr_sup0      ? regWrDataCommit : csr_sup0; 
     csr_sup1      <=  wr_csr_sup1      ? regWrDataCommit : csr_sup1; 
@@ -454,9 +444,9 @@ end
 always_comb
 begin
   case(regRdAddr_i)
-    12'h001:regRdData_o   =  csr_fflags    ;
-    12'h002:regRdData_o   =  csr_frm       ;
-    12'h003:regRdData_o   =  csr_fcsr      ;
+    `CSR_FFLAGS     : regRdData_o = {{`CSR_WIDTH-5{1'b0}}, csr_fcsr[4:0]};
+    `CSR_FRM        : regRdData_o = {{`CSR_WIDTH-3{1'b0}}, csr_fcsr[7:5]};
+    `CSR_FCSR       : regRdData_o = {{`CSR_WIDTH-8{1'b0}}, csr_fcsr[7:0]};
     12'h0c0:regRdData_o   =  csr_stats     ; 
     12'h500:regRdData_o   =  csr_sup0      ; 
     12'h501:regRdData_o   =  csr_sup1      ; 
@@ -492,9 +482,9 @@ end
 always_comb
 begin
   case(regRdAddrChkpt)
-    12'h001:atomicRdVioFlag = (regRdDataChkpt   !=  csr_fflags    );
-    12'h002:atomicRdVioFlag = (regRdDataChkpt   !=  csr_frm       );
-    12'h003:atomicRdVioFlag = (regRdDataChkpt   !=  csr_fcsr      );
+    `CSR_FFLAGS     :atomicRdVioFlag = (regRdDataChkpt   != {{`CSR_WIDTH-5{1'b0}}, csr_fcsr[4:0]});
+    `CSR_FRM        :atomicRdVioFlag = (regRdDataChkpt   != {{`CSR_WIDTH-3{1'b0}}, csr_fcsr[7:5]});
+    `CSR_FCSR       :atomicRdVioFlag = (regRdDataChkpt   != {{`CSR_WIDTH-8{1'b0}}, csr_fcsr[7:0]});
     12'h0c0:atomicRdVioFlag = (regRdDataChkpt   !=  csr_stats     ); 
     12'h500:atomicRdVioFlag = (regRdDataChkpt   !=  csr_sup0      ); 
     12'h501:atomicRdVioFlag = (regRdDataChkpt   !=  csr_sup1      ); 
