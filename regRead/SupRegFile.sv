@@ -94,6 +94,12 @@ module SupRegFile (
 //`define RISCV_PGSIZE        (1 << `RISCV_PGSHIFT)
 
 
+//typedef enum logic [1:0] {
+//    USER_PRIVILEGE = 2'b00,
+//    SUPERVISOR_PRIVILEGE = 2'b01,
+//    //reserved
+//    MACHINE_PRIVILEGE = 2'b11
+//} privilege_t;
 
 logic rv64;
 /*Original CSRs*/
@@ -125,6 +131,8 @@ logic [`CSR_WIDTH-1:0]  csr_cycleh;
 logic [`CSR_WIDTH-1:0]  csr_timeh; 
 logic [`CSR_WIDTH-1:0]  csr_instreth;
 /* New CSRs */
+//logic [`CSR_WIDTH-1:0]  csr_mtvec; - evec for now
+logic [`CSR_WIDTH-1:0]  csr_satp;
 
 logic                        wr_csr_fflags    ;
 logic                        wr_csr_frm       ;
@@ -155,6 +163,8 @@ logic                        wr_csr_instret   ;
 logic                        wr_csr_cycleh    ;
 logic                        wr_csr_timeh     ;
 logic                        wr_csr_instreth  ;
+
+logic                        wr_csr_satp  ;
 
 logic [`CSR_WIDTH-1:0]  csr_epc_next; 
 logic [`CSR_WIDTH-1:0]  csr_badvaddr_next; 
@@ -290,6 +300,8 @@ begin
   wr_csr_cycleh    =  1'b0;
   wr_csr_timeh     =  1'b0;
   wr_csr_instreth  =  1'b0;
+
+  wr_csr_satp      =  1'b0;
   clear_irq_vector =  64'b0;
 
   // Write the register when the CSR instruction commits
@@ -308,7 +320,8 @@ begin
       12'h505:wr_csr_asid      = 1'b1; 
       12'h506:wr_csr_count     = 1'b1; 
       12'h507:wr_csr_compare   = 1'b1; 
-      12'h508:wr_csr_evec      = 1'b1; 
+      //12'h508:wr_csr_evec      = 1'b1;
+      `CSR_MTVEC       :wr_csr_evec      = 1'b1;
       12'h509:wr_csr_cause     = 1'b1; 
       12'h50a:wr_csr_status    = 1'b1; 
       12'h50b:wr_csr_hartid    = 1'b1; 
@@ -328,6 +341,8 @@ begin
       12'hc80:wr_csr_cycleh    = 1'b1; 
       12'hc81:wr_csr_timeh     = 1'b1; 
       12'hc82:wr_csr_instreth  = 1'b1; 
+
+      `CSR_SATP:wr_csr_satp  = 1'b1;
     endcase
   end
 end
@@ -364,6 +379,8 @@ begin
     csr_cycleh    <=  `CSR_WIDTH'b0;
     csr_timeh     <=  `CSR_WIDTH'b0;
     csr_instreth  <=  `CSR_WIDTH'b0;
+
+    csr_satp      <=  `CSR_WIDTH'b0;
   end
   // Write the register when the CSR instruction commits
   else
@@ -399,6 +416,15 @@ begin
     csr_cycleh    <=  wr_csr_cycleh    ? regWrDataCommit : csr_cycleh;
     csr_timeh     <=  wr_csr_timeh     ? regWrDataCommit : csr_timeh;
     csr_instreth  <=  wr_csr_instreth  ? regWrDataCommit : csr_instreth;
+
+    if (wr_csr_satp) begin
+      //TODO
+      //if(priv == S && (csr_mstatus & MSTATUS_TVM)) begin
+      //   write access exception
+      //end else begin
+          csr_satp <= regWrDataCommit;
+      //end
+    end
   end
 end
 
@@ -456,7 +482,8 @@ begin
     12'h505:regRdData_o   =  csr_asid      ; 
     12'h506:regRdData_o   =  csr_count     ; 
     12'h507:regRdData_o   =  csr_compare   ; 
-    12'h508:regRdData_o   =  csr_evec      ; 
+    //12'h508:regRdData_o   =  csr_evec      ;
+    `CSR_MTVEC      :regRdData_o   =  csr_evec      ;
     12'h509:regRdData_o   =  csr_cause     ;  
     12'h50a:regRdData_o   =  csr_status    ;   
     12'h50b:regRdData_o   =  csr_hartid    ;   
@@ -474,6 +501,13 @@ begin
     12'hc81:regRdData_o   =  csr_timeh     ;
     12'hc82:regRdData_o   =  csr_instreth  ;
     `CSR_MHARTID:regRdData_o = `CSR_WIDTH'b0;
+    `CSR_SATP      : begin
+      //TODO:
+      //if(priv == S && (csr_mstatus & MSTATUS_TVM))
+      //   read access exception
+      //else
+      regRdData_o   =  csr_satp;
+    end
     default:regRdData_o   =  `CSR_WIDTH'bx;
   endcase  
 end
@@ -494,7 +528,8 @@ begin
     12'h505:atomicRdVioFlag = (regRdDataChkpt   !=  csr_asid      ); 
     12'h506:atomicRdVioFlag = (regRdDataChkpt   !=  csr_count     ); 
     12'h507:atomicRdVioFlag = (regRdDataChkpt   !=  csr_compare   ); 
-    12'h508:atomicRdVioFlag = (regRdDataChkpt   !=  csr_evec      ); 
+    //12'h508:atomicRdVioFlag = (regRdDataChkpt   !=  csr_evec      );
+    `CSR_MTVEC      :atomicRdVioFlag = (regRdDataChkpt   !=  csr_evec      );
     12'h509:atomicRdVioFlag = (regRdDataChkpt   !=  csr_cause     );  
     12'h50a:atomicRdVioFlag = (regRdDataChkpt   !=  csr_status    );   
     12'h50b:atomicRdVioFlag = (regRdDataChkpt   !=  csr_hartid    );   
@@ -511,6 +546,7 @@ begin
     12'hc80:atomicRdVioFlag = (regRdDataChkpt   !=  csr_cycleh    );
     12'hc81:atomicRdVioFlag = (regRdDataChkpt   !=  csr_timeh     );
     12'hc82:atomicRdVioFlag = (regRdDataChkpt   !=  csr_instreth  );
+    `CSR_SATP      :atomicRdVioFlag = (regRdDataChkpt   !=  csr_satp      );
     default:atomicRdVioFlag = 1'b0;
   endcase  
 end
