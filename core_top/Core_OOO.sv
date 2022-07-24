@@ -92,6 +92,8 @@ module Core_OOO(
   input                               mem2dcStComplete_i,
   input                               mem2dcStStall_i,
 
+  input [`CSR_WIDTH-1:0]              hartId_i, // hart id for multicore environment
+
   input [`DCACHE_INDEX_BITS+`DCACHE_BYTES_IN_LINE_LOG-1:0]  dcScratchWrAddr_i,
   input                               dcScratchWrEn_i,
   input [7:0]                         dcScratchWrData_i,
@@ -1124,6 +1126,8 @@ SupRegFile supregisterfile (
   .sretFlag_i           (sretFlag),
 
   .csr_fflags_i		(csr_fflags),		//Changes: Mohit (Update CSR_FFLAGS at retire)
+
+  .hartId_i                     , // constant
 
   .atomicRdVioFlag_o    (csrViolateFlag),
   .interruptPending_o   (interruptPending),

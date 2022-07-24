@@ -66,7 +66,9 @@ module AnyCore_Piton(
   input                            mem2dcStComplete_i,
   input                            mem2dcStStall_i,
 
-  input                             anycore_int
+  input                             anycore_int,
+
+  input        [`CSR_WIDTH-1:0]     hartId_i, // hart id in multicore environment
 
 	);
 
@@ -316,6 +318,7 @@ Core_OOO coreTop(
     .reset                               (reset_sync),
     .resetFetch_i                        (resetFetch_sync),
     .toggleFlag_o                        (toggleFlag_o),
+    .hartId_i                                          , //constant
 
 `ifdef SCRATCH_PAD
     .instScratchAddr_i                   (instScratchAddr),

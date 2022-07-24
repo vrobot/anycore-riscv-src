@@ -43,6 +43,8 @@ module SupRegFile (
   input                               sretFlag_i,
   input        [`CSR_WIDTH-1:0]	      csr_fflags_i,
 
+  input        [`CSR_WIDTH-1:0]       hartId_i, // hart id in multicore environment
+
   output logic                        atomicRdVioFlag_o,
   output logic                        interruptPending_o,
   output       [`CSR_WIDTH-1:0]       csr_epc_o,
@@ -500,7 +502,7 @@ begin
     12'hc80:regRdData_o   =  csr_cycleh    ;
     12'hc81:regRdData_o   =  csr_timeh     ;
     12'hc82:regRdData_o   =  csr_instreth  ;
-    `CSR_MHARTID:regRdData_o = `CSR_WIDTH'b0;
+    `CSR_MHARTID:regRdData_o = hartId_i;
     `CSR_SATP      : begin
       //TODO:
       //if(priv == S && (csr_mstatus & MSTATUS_TVM))
