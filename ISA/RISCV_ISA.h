@@ -367,14 +367,29 @@
 `define CAUSE_MISALIGNED_FETCH        4'h0
 `define CAUSE_FAULT_FETCH             4'h1
 `define CAUSE_ILLEGAL_INSTRUCTION     4'h2
+`define CAUSE_BREAKPOINT              4'h3
+`define CAUSE_MISALIGNED_LOAD         4'h4
+`define CAUSE_FAULT_LOAD              4'h5
+`define CAUSE_MISALIGNED_STORE        4'h6
+`define CAUSE_FAULT_STORE             4'h7
+`define CAUSE_ECALL_UMODE             4'h8
+`define CAUSE_ECALL_SMODE             4'h9
+`define CAUSE_ECALL_MMODE             4'hb
+`define CAUSE_INST_PAGE_FAULT         4'hc
+`define CAUSE_LOAD_PAGE_FAULT         4'hd
+`define CAUSE_STORE_PAGE_FAULT        4'hf
+
+//`define CAUSE_MISALIGNED_FETCH        4'h0
+//`define CAUSE_FAULT_FETCH             4'h1
+//`define CAUSE_ILLEGAL_INSTRUCTION     4'h2
 `define CAUSE_PRIVILEGED_INSTRUCTION  4'h3
 `define CAUSE_FP_DISABLED             4'h4
 `define CAUSE_SYSCALL                 4'h6
-`define CAUSE_BREAKPOINT              4'h7
-`define CAUSE_MISALIGNED_LOAD         4'h8
-`define CAUSE_MISALIGNED_STORE        4'h9
-`define CAUSE_FAULT_LOAD              4'ha
-`define CAUSE_FAULT_STORE             4'hb
+//`define CAUSE_BREAKPOINT              4'h7
+//`define CAUSE_MISALIGNED_LOAD         4'h8
+//`define CAUSE_MISALIGNED_STORE        4'h9
+//`define CAUSE_FAULT_LOAD              4'ha
+//`define CAUSE_FAULT_STORE             4'hb
 `define CAUSE_ACCELERATOR_DISABLED    4'hc
 `define CAUSE_CSR_INSTRUCTION         4'hd
 

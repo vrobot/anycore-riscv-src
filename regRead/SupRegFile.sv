@@ -111,6 +111,19 @@ localparam logic [`CSR_WIDTH-1:0] MIE_MASK = (
     `MIP_MTIP |
     `MIP_MEIP );
 
+localparam logic [`CSR_WIDTH-1:0] MIDELEG_MASK = (
+    `MIP_SSIP |
+    `MIP_STIP |
+    `MIP_SEIP );
+
+localparam logic [`CSR_WIDTH-1:0] MEDELEG_MASK = (
+    (1 << `CAUSE_MISALIGNED_FETCH ) |
+    (1 << `CAUSE_BREAKPOINT       ) |
+    (1 << `CAUSE_ECALL_UMODE      ) |
+    (1 << `CAUSE_INST_PAGE_FAULT  ) |
+    (1 << `CAUSE_LOAD_PAGE_FAULT  ) |
+    (1 << `CAUSE_STORE_PAGE_FAULT ) );
+
 logic rv64;
 /*Original CSRs*/
 logic [`CSR_WIDTH-1:0]  csr_fcsr;
@@ -141,6 +154,8 @@ logic [`CSR_WIDTH-1:0]  csr_cycleh;
 logic [`CSR_WIDTH-1:0]  csr_timeh; 
 logic [`CSR_WIDTH-1:0]  csr_instreth;
 /* New CSRs */
+logic [`CSR_WIDTH-1:0]  csr_medeleg;
+logic [`CSR_WIDTH-1:0]  csr_mideleg;
 logic [`CSR_WIDTH-1:0]  csr_mie;
 //logic [`CSR_WIDTH-1:0]  csr_mtvec; - evec for now
 logic [`CSR_WIDTH-1:0]  csr_satp;
@@ -175,6 +190,8 @@ logic                        wr_csr_cycleh    ;
 logic                        wr_csr_timeh     ;
 logic                        wr_csr_instreth  ;
 
+logic                        wr_csr_medeleg   ;
+logic                        wr_csr_mideleg   ;
 logic                        wr_csr_mie       ;
 logic                        wr_csr_satp  ;
 
@@ -313,6 +330,8 @@ begin
   wr_csr_timeh     =  1'b0;
   wr_csr_instreth  =  1'b0;
 
+  wr_csr_medeleg   =  1'b0;
+  wr_csr_mideleg   =  1'b0;
   wr_csr_mie       =  1'b0;
   wr_csr_satp      =  1'b0;
   clear_irq_vector =  64'b0;
@@ -355,6 +374,8 @@ begin
       12'hc81:wr_csr_timeh     = 1'b1; 
       12'hc82:wr_csr_instreth  = 1'b1; 
 
+      `CSR_MEDELEG: wr_csr_medeleg = 1'b1;
+      `CSR_MIDELEG: wr_csr_mideleg = 1'b1;
       `CSR_MIE: wr_csr_mie     = 1'b1;
       `CSR_SATP:wr_csr_satp  = 1'b1;
     endcase
@@ -394,6 +415,8 @@ begin
     csr_timeh     <=  `CSR_WIDTH'b0;
     csr_instreth  <=  `CSR_WIDTH'b0;
 
+    csr_medeleg   <=  `CSR_WIDTH'b0;
+    csr_mideleg   <=  `CSR_WIDTH'b0;
     csr_mie       <=  `CSR_WIDTH'b0;
     csr_satp      <=  `CSR_WIDTH'b0;
   end
@@ -432,6 +455,12 @@ begin
     csr_timeh     <=  wr_csr_timeh     ? regWrDataCommit : csr_timeh;
     csr_instreth  <=  wr_csr_instreth  ? regWrDataCommit : csr_instreth;
 
+    if (wr_csr_medeleg) begin
+      csr_medeleg <= (regWrDataCommit & MEDELEG_MASK) | (csr_medeleg & ~MEDELEG_MASK);
+    end
+    if (wr_csr_mideleg) begin
+      csr_mideleg <= (regWrDataCommit & MIDELEG_MASK) | (csr_mideleg & ~MIDELEG_MASK);
+    end
     if (wr_csr_mie) begin
       csr_mie <= (regWrDataCommit & MIE_MASK) | (csr_mie & ~MIE_MASK);
     end
@@ -520,6 +549,8 @@ begin
     12'hc81:regRdData_o   =  csr_timeh     ;
     12'hc82:regRdData_o   =  csr_instreth  ;
     `CSR_MHARTID:regRdData_o = hartId_i;
+    `CSR_MEDELEG   : regRdData_o = csr_medeleg;
+    `CSR_MIDELEG   : regRdData_o = csr_mideleg;
     `CSR_MIE       : regRdData_o = csr_mie;
     `CSR_SATP      : begin
       //TODO:
@@ -566,6 +597,8 @@ begin
     12'hc80:atomicRdVioFlag = (regRdDataChkpt   !=  csr_cycleh    );
     12'hc81:atomicRdVioFlag = (regRdDataChkpt   !=  csr_timeh     );
     12'hc82:atomicRdVioFlag = (regRdDataChkpt   !=  csr_instreth  );
+    `CSR_MEDELEG   :atomicRdVioFlag = (regRdDataChkpt   !=  csr_medeleg   );
+    `CSR_MIDELEG   :atomicRdVioFlag = (regRdDataChkpt   !=  csr_mideleg   );
     `CSR_MIE       :atomicRdVioFlag = (regRdDataChkpt   !=  csr_mie       );
     `CSR_SATP      :atomicRdVioFlag = (regRdDataChkpt   !=  csr_satp      );
     default:atomicRdVioFlag = 1'b0;
