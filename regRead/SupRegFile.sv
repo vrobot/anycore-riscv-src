@@ -177,8 +177,10 @@ logic [`CSR_WIDTH-1:0]  csr_mstatus;
 logic [`CSR_WIDTH-1:0]  csr_medeleg;
 logic [`CSR_WIDTH-1:0]  csr_mideleg;
 logic [`CSR_WIDTH-1:0]  csr_mie;
+logic [`CSR_WIDTH-1:0]  csr_mepc;
 //logic [`CSR_WIDTH-1:0]  csr_mtvec; - evec for now
 logic [`CSR_WIDTH-1:0]  csr_satp;
+logic [`CSR_WIDTH-1:0]  csr_sepc;
 
 logic                        wr_csr_fflags    ;
 logic                        wr_csr_frm       ;
@@ -214,10 +216,14 @@ logic                        wr_csr_mstatus   ;
 logic                        wr_csr_medeleg   ;
 logic                        wr_csr_mideleg   ;
 logic                        wr_csr_mie       ;
+logic                        wr_csr_mepc      ;
 logic                        wr_csr_sstatus   ;
 logic                        wr_csr_satp  ;
+logic                        wr_csr_sepc      ;
 
 logic [`CSR_WIDTH-1:0]  csr_epc_next; 
+logic [`CSR_WIDTH-1:0]  csr_mepc_next;
+logic [`CSR_WIDTH-1:0]  csr_sepc_next;
 logic [`CSR_WIDTH-1:0]  csr_badvaddr_next; 
 logic [`CSR_WIDTH-1:0]  csr_count_next; 
 logic [`CSR_WIDTH-1:0]  csr_cause_next; 
@@ -238,8 +244,14 @@ logic [7:0]                  interrupts;
 assign interrupts = ((csr_status & `SR_IP) >> `SR_IP_SHIFT) & (csr_status >> `SR_IM_SHIFT);
 assign interruptPending_o = (|interrupts) & (|(csr_status & `SR_EI)); //If interrupt enabled and interrupts pending
 
+always_comb begin
+  if (sretFlag_i) begin
+    assign csr_epc_o  = csr_sepc;
+  end else begin
+    assign csr_epc_o  = csr_mepc;
+  end
+end
 assign csr_evec_o = csr_evec;
-assign csr_epc_o  = csr_epc;
 assign csr_status_o  = csr_status;	//Changes: Mohit
 assign csr_frm_o  = {{`CSR_WIDTH-3{1'b0}}, csr_fcsr[7:5]};
 
@@ -353,8 +365,10 @@ begin
   wr_csr_medeleg   =  1'b0;
   wr_csr_mideleg   =  1'b0;
   wr_csr_mie       =  1'b0;
+  wr_csr_mepc      =  1'b0;
   wr_csr_sstatus   =  1'b0;
   wr_csr_satp      =  1'b0;
+  wr_csr_sepc      =  1'b0;
   clear_irq_vector =  64'b0;
 
   // Write the register when the CSR instruction commits
@@ -399,8 +413,10 @@ begin
       `CSR_MEDELEG: wr_csr_medeleg = 1'b1;
       `CSR_MIDELEG: wr_csr_mideleg = 1'b1;
       `CSR_MIE: wr_csr_mie     = 1'b1;
+      `CSR_MEPC       : wr_csr_mepc       = 1'b1;
       `CSR_SSTATUS    : wr_csr_sstatus    = 1'b1;
       `CSR_SATP:wr_csr_satp  = 1'b1;
+      `CSR_SEPC       : wr_csr_sepc       = 1'b1;
     endcase
   end
 end
@@ -442,7 +458,9 @@ begin
     csr_medeleg   <=  `CSR_WIDTH'b0;
     csr_mideleg   <=  `CSR_WIDTH'b0;
     csr_mie       <=  `CSR_WIDTH'b0;
+    csr_mepc      <=  `CSR_WIDTH'b0;
     csr_satp      <=  `CSR_WIDTH'b0;
+    csr_sepc      <=  `CSR_WIDTH'b0;
   end
   // Write the register when the CSR instruction commits
   else
@@ -490,6 +508,7 @@ begin
     if (wr_csr_mie) begin
       csr_mie <= (regWrDataCommit & MIE_MASK) | (csr_mie & ~MIE_MASK);
     end
+    csr_mepc      <=  wr_csr_mepc      ? {regWrDataCommit[`CSR_WIDTH-1:1], 1'b0} : csr_mepc_next;
     if (wr_csr_satp) begin
       //TODO
       //if(priv == S && (csr_mstatus & MSTATUS_TVM)) begin
@@ -498,6 +517,7 @@ begin
           csr_satp <= regWrDataCommit;
       //end
     end
+    csr_sepc      <=  wr_csr_sepc      ? {regWrDataCommit[`CSR_WIDTH-1:1], 1'b0} : csr_sepc_next;
 
   end
 end
@@ -505,6 +525,9 @@ end
 assign set_irq_vector  = 0;
 
 assign csr_epc_next       = exceptionFlag_i ? exceptionPC_i    : csr_epc;
+//TODO: check current privilege level and only set the correct one to the input
+assign csr_mepc_next      = exceptionFlag_i ? exceptionPC_i    : csr_mepc;
+assign csr_sepc_next      = exceptionFlag_i ? exceptionPC_i    : csr_sepc;
 assign csr_count_next     = csr_count + totalCommit_i + exceptionFlag_i;
 assign csr_cause_next     = exceptionFlag_i ? exceptionCause_i : csr_cause;
 
@@ -579,6 +602,7 @@ begin
     `CSR_MEDELEG   : regRdData_o = csr_medeleg;
     `CSR_MIDELEG   : regRdData_o = csr_mideleg;
     `CSR_MIE       : regRdData_o = csr_mie;
+    `CSR_MEPC       : regRdData_o = csr_mepc;
     `CSR_SSTATUS    : regRdData_o = csr_mstatus & SSTATUS_READ_MASK;
     `CSR_SATP      : begin
       //TODO:
@@ -587,6 +611,7 @@ begin
       //else
       regRdData_o   =  csr_satp;
     end
+    `CSR_SEPC       : regRdData_o = csr_sepc;
     default:regRdData_o   =  `CSR_WIDTH'bx;
   endcase  
 end
@@ -629,8 +654,10 @@ begin
     `CSR_MEDELEG   :atomicRdVioFlag = (regRdDataChkpt   !=  csr_medeleg   );
     `CSR_MIDELEG   :atomicRdVioFlag = (regRdDataChkpt   !=  csr_mideleg   );
     `CSR_MIE       :atomicRdVioFlag = (regRdDataChkpt   !=  csr_mie       );
+    `CSR_MEPC      : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mepc      );
     `CSR_SSTATUS   : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mstatus & SSTATUS_READ_MASK);
     `CSR_SATP      :atomicRdVioFlag = (regRdDataChkpt   !=  csr_satp      );
+    `CSR_SEPC      : atomicRdVioFlag = (regRdDataChkpt  !=  csr_sepc      );
     default:atomicRdVioFlag = 1'b0;
   endcase  
 end
