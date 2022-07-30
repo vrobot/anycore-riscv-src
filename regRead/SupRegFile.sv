@@ -124,7 +124,26 @@ localparam logic [`CSR_WIDTH-1:0] MEDELEG_MASK = (
     (1 << `CAUSE_LOAD_PAGE_FAULT  ) |
     (1 << `CAUSE_STORE_PAGE_FAULT ) );
 
-logic rv64;
+localparam logic [`CSR_WIDTH-1:0] SSTATUS_READ_MASK = (
+     `SSTATUS_SIE  |
+     `SSTATUS_SPIE |
+     `SSTATUS_UBE  |
+     `SSTATUS_SPP  |
+     `SSTATUS_FS   |
+     `SSTATUS_XS   |
+     `SSTATUS_SUM  |
+     `SSTATUS_MXR  |
+     `SSTATUS_UXL  |
+     `SSTATUS_SD   );
+
+localparam logic [`CSR_WIDTH-1:0] SSTATUS_WRITE_MASK = (
+     `SSTATUS_SIE  |
+     `SSTATUS_SPIE |
+     `SSTATUS_SPP  |
+     `SSTATUS_FS   |
+     `SSTATUS_SUM  |
+     `SSTATUS_MXR  );
+
 /*Original CSRs*/
 logic [`CSR_WIDTH-1:0]  csr_fcsr;
 logic [`CSR_WIDTH-1:0]  csr_stats;
@@ -154,6 +173,7 @@ logic [`CSR_WIDTH-1:0]  csr_cycleh;
 logic [`CSR_WIDTH-1:0]  csr_timeh; 
 logic [`CSR_WIDTH-1:0]  csr_instreth;
 /* New CSRs */
+logic [`CSR_WIDTH-1:0]  csr_mstatus;
 logic [`CSR_WIDTH-1:0]  csr_medeleg;
 logic [`CSR_WIDTH-1:0]  csr_mideleg;
 logic [`CSR_WIDTH-1:0]  csr_mie;
@@ -190,9 +210,11 @@ logic                        wr_csr_cycleh    ;
 logic                        wr_csr_timeh     ;
 logic                        wr_csr_instreth  ;
 
+logic                        wr_csr_mstatus   ;
 logic                        wr_csr_medeleg   ;
 logic                        wr_csr_mideleg   ;
 logic                        wr_csr_mie       ;
+logic                        wr_csr_sstatus   ;
 logic                        wr_csr_satp  ;
 
 logic [`CSR_WIDTH-1:0]  csr_epc_next; 
@@ -213,7 +235,6 @@ logic 			regWrValid; //Changes: Mohit (Ensures correct regWrite irrespective of 
 logic                        atomicRdVioFlag;
 logic [7:0]                  interrupts;
 
-assign rv64 = (csr_status & `SR_S) ? (csr_status & `SR_S64) : (csr_status & `SR_U64);
 assign interrupts = ((csr_status & `SR_IP) >> `SR_IP_SHIFT) & (csr_status >> `SR_IM_SHIFT);
 assign interruptPending_o = (|interrupts) & (|(csr_status & `SR_EI)); //If interrupt enabled and interrupts pending
 
@@ -295,8 +316,6 @@ begin
 end
 
 
-logic [`CSR_WIDTH-1:0] status_val;
-
 // Register Write operation
 always_comb
 begin
@@ -330,9 +349,11 @@ begin
   wr_csr_timeh     =  1'b0;
   wr_csr_instreth  =  1'b0;
 
+  wr_csr_mstatus   =  1'b0;
   wr_csr_medeleg   =  1'b0;
   wr_csr_mideleg   =  1'b0;
   wr_csr_mie       =  1'b0;
+  wr_csr_sstatus   =  1'b0;
   wr_csr_satp      =  1'b0;
   clear_irq_vector =  64'b0;
 
@@ -374,9 +395,11 @@ begin
       12'hc81:wr_csr_timeh     = 1'b1; 
       12'hc82:wr_csr_instreth  = 1'b1; 
 
+      `CSR_MSTATUS    : wr_csr_mstatus    = 1'b1;
       `CSR_MEDELEG: wr_csr_medeleg = 1'b1;
       `CSR_MIDELEG: wr_csr_mideleg = 1'b1;
       `CSR_MIE: wr_csr_mie     = 1'b1;
+      `CSR_SSTATUS    : wr_csr_sstatus    = 1'b1;
       `CSR_SATP:wr_csr_satp  = 1'b1;
     endcase
   end
@@ -415,6 +438,7 @@ begin
     csr_timeh     <=  `CSR_WIDTH'b0;
     csr_instreth  <=  `CSR_WIDTH'b0;
 
+    csr_mstatus    <=  (`MSTATUS_SXL_64 | `MSTATUS_UXL_64 ); // only set up the base ISA after reset
     csr_medeleg   <=  `CSR_WIDTH'b0;
     csr_mideleg   <=  `CSR_WIDTH'b0;
     csr_mie       <=  `CSR_WIDTH'b0;
@@ -455,6 +479,8 @@ begin
     csr_timeh     <=  wr_csr_timeh     ? regWrDataCommit : csr_timeh;
     csr_instreth  <=  wr_csr_instreth  ? regWrDataCommit : csr_instreth;
 
+    csr_mstatus   <= wr_csr_mstatus ? regWrDataCommit : csr_mstatus;
+    csr_mstatus   <= wr_csr_sstatus ? (regWrDataCommit & SSTATUS_WRITE_MASK) & (csr_mstatus & ~SSTATUS_WRITE_MASK) : csr_mstatus;
     if (wr_csr_medeleg) begin
       csr_medeleg <= (regWrDataCommit & MEDELEG_MASK) | (csr_medeleg & ~MEDELEG_MASK);
     end
@@ -549,9 +575,11 @@ begin
     12'hc81:regRdData_o   =  csr_timeh     ;
     12'hc82:regRdData_o   =  csr_instreth  ;
     `CSR_MHARTID:regRdData_o = hartId_i;
+    `CSR_MSTATUS    : regRdData_o = csr_mstatus    ;
     `CSR_MEDELEG   : regRdData_o = csr_medeleg;
     `CSR_MIDELEG   : regRdData_o = csr_mideleg;
     `CSR_MIE       : regRdData_o = csr_mie;
+    `CSR_SSTATUS    : regRdData_o = csr_mstatus & SSTATUS_READ_MASK;
     `CSR_SATP      : begin
       //TODO:
       //if(priv == S && (csr_mstatus & MSTATUS_TVM))
@@ -597,9 +625,11 @@ begin
     12'hc80:atomicRdVioFlag = (regRdDataChkpt   !=  csr_cycleh    );
     12'hc81:atomicRdVioFlag = (regRdDataChkpt   !=  csr_timeh     );
     12'hc82:atomicRdVioFlag = (regRdDataChkpt   !=  csr_instreth  );
+    `CSR_MSTATUS   : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mstatus   );
     `CSR_MEDELEG   :atomicRdVioFlag = (regRdDataChkpt   !=  csr_medeleg   );
     `CSR_MIDELEG   :atomicRdVioFlag = (regRdDataChkpt   !=  csr_mideleg   );
     `CSR_MIE       :atomicRdVioFlag = (regRdDataChkpt   !=  csr_mie       );
+    `CSR_SSTATUS   : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mstatus & SSTATUS_READ_MASK);
     `CSR_SATP      :atomicRdVioFlag = (regRdDataChkpt   !=  csr_satp      );
     default:atomicRdVioFlag = 1'b0;
   endcase  
