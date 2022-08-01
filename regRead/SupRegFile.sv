@@ -178,7 +178,8 @@ logic [`CSR_WIDTH-1:0]  csr_medeleg;
 logic [`CSR_WIDTH-1:0]  csr_mideleg;
 logic [`CSR_WIDTH-1:0]  csr_mie;
 logic [`CSR_WIDTH-1:0]  csr_mepc;
-//logic [`CSR_WIDTH-1:0]  csr_mtvec; - evec for now
+logic [`CSR_WIDTH-1:0]  csr_mtvec;
+logic [`CSR_WIDTH-1:0]  csr_stvec;
 logic [`CSR_WIDTH-1:0]  csr_satp;
 logic [`CSR_WIDTH-1:0]  csr_sepc;
 
@@ -216,8 +217,10 @@ logic                        wr_csr_mstatus   ;
 logic                        wr_csr_medeleg   ;
 logic                        wr_csr_mideleg   ;
 logic                        wr_csr_mie       ;
+logic                        wr_csr_mtvec     ;
 logic                        wr_csr_mepc      ;
 logic                        wr_csr_sstatus   ;
+logic                        wr_csr_stvec     ;
 logic                        wr_csr_satp  ;
 logic                        wr_csr_sepc      ;
 
@@ -251,7 +254,10 @@ always_comb begin
     assign csr_epc_o  = csr_mepc;
   end
 end
-assign csr_evec_o = csr_evec;
+
+//TODO: set to stvec or mtvec based on privilege level
+assign csr_evec_o = csr_mtvec;
+
 assign csr_status_o  = csr_status;	//Changes: Mohit
 assign csr_frm_o  = {{`CSR_WIDTH-3{1'b0}}, csr_fcsr[7:5]};
 
@@ -365,8 +371,10 @@ begin
   wr_csr_medeleg   =  1'b0;
   wr_csr_mideleg   =  1'b0;
   wr_csr_mie       =  1'b0;
+  wr_csr_mtvec     =  1'b0;
   wr_csr_mepc      =  1'b0;
   wr_csr_sstatus   =  1'b0;
+  wr_csr_stvec     =  1'b0;
   wr_csr_satp      =  1'b0;
   wr_csr_sepc      =  1'b0;
   clear_irq_vector =  64'b0;
@@ -387,8 +395,7 @@ begin
       12'h505:wr_csr_asid      = 1'b1; 
       12'h506:wr_csr_count     = 1'b1; 
       12'h507:wr_csr_compare   = 1'b1; 
-      //12'h508:wr_csr_evec      = 1'b1;
-      `CSR_MTVEC       :wr_csr_evec      = 1'b1;
+      12'h508:wr_csr_evec      = 1'b1;
       12'h509:wr_csr_cause     = 1'b1; 
       12'h50a:wr_csr_status    = 1'b1; 
       12'h50b:wr_csr_hartid    = 1'b1; 
@@ -413,8 +420,10 @@ begin
       `CSR_MEDELEG: wr_csr_medeleg = 1'b1;
       `CSR_MIDELEG: wr_csr_mideleg = 1'b1;
       `CSR_MIE: wr_csr_mie     = 1'b1;
+      `CSR_MTVEC      : wr_csr_mtvec      = 1'b1;
       `CSR_MEPC       : wr_csr_mepc       = 1'b1;
       `CSR_SSTATUS    : wr_csr_sstatus    = 1'b1;
+      `CSR_STVEC      : wr_csr_stvec      = 1'b1;
       `CSR_SATP:wr_csr_satp  = 1'b1;
       `CSR_SEPC       : wr_csr_sepc       = 1'b1;
     endcase
@@ -458,7 +467,9 @@ begin
     csr_medeleg   <=  `CSR_WIDTH'b0;
     csr_mideleg   <=  `CSR_WIDTH'b0;
     csr_mie       <=  `CSR_WIDTH'b0;
+    csr_mtvec     <=  `CSR_WIDTH'b0; //TODO: reset to boot address
     csr_mepc      <=  `CSR_WIDTH'b0;
+    csr_stvec     <=  `CSR_WIDTH'b0;
     csr_satp      <=  `CSR_WIDTH'b0;
     csr_sepc      <=  `CSR_WIDTH'b0;
   end
@@ -508,7 +519,9 @@ begin
     if (wr_csr_mie) begin
       csr_mie <= (regWrDataCommit & MIE_MASK) | (csr_mie & ~MIE_MASK);
     end
+    csr_mtvec     <=  wr_csr_mtvec     ? {regWrDataCommit[`CSR_WIDTH-1:2], 1'b0, regWrDataCommit[0]}: csr_mtvec;
     csr_mepc      <=  wr_csr_mepc      ? {regWrDataCommit[`CSR_WIDTH-1:1], 1'b0} : csr_mepc_next;
+    csr_stvec     <=  wr_csr_stvec     ? {regWrDataCommit[`CSR_WIDTH-1:2], 1'b0, regWrDataCommit[0]}: csr_stvec;
     if (wr_csr_satp) begin
       //TODO
       //if(priv == S && (csr_mstatus & MSTATUS_TVM)) begin
@@ -579,8 +592,7 @@ begin
     12'h505:regRdData_o   =  csr_asid      ; 
     12'h506:regRdData_o   =  csr_count     ; 
     12'h507:regRdData_o   =  csr_compare   ; 
-    //12'h508:regRdData_o   =  csr_evec      ;
-    `CSR_MTVEC      :regRdData_o   =  csr_evec      ;
+    12'h508:regRdData_o   =  csr_evec      ;
     12'h509:regRdData_o   =  csr_cause     ;  
     12'h50a:regRdData_o   =  csr_status    ;   
     12'h50b:regRdData_o   =  csr_hartid    ;   
@@ -602,8 +614,10 @@ begin
     `CSR_MEDELEG   : regRdData_o = csr_medeleg;
     `CSR_MIDELEG   : regRdData_o = csr_mideleg;
     `CSR_MIE       : regRdData_o = csr_mie;
+    `CSR_MTVEC      : regRdData_o = csr_mtvec;
     `CSR_MEPC       : regRdData_o = csr_mepc;
     `CSR_SSTATUS    : regRdData_o = csr_mstatus & SSTATUS_READ_MASK;
+    `CSR_STVEC      : regRdData_o = csr_stvec;
     `CSR_SATP      : begin
       //TODO:
       //if(priv == S && (csr_mstatus & MSTATUS_TVM))
@@ -632,8 +646,7 @@ begin
     12'h505:atomicRdVioFlag = (regRdDataChkpt   !=  csr_asid      ); 
     12'h506:atomicRdVioFlag = (regRdDataChkpt   !=  csr_count     ); 
     12'h507:atomicRdVioFlag = (regRdDataChkpt   !=  csr_compare   ); 
-    //12'h508:atomicRdVioFlag = (regRdDataChkpt   !=  csr_evec      );
-    `CSR_MTVEC      :atomicRdVioFlag = (regRdDataChkpt   !=  csr_evec      );
+    12'h508:atomicRdVioFlag = (regRdDataChkpt   !=  csr_evec      );
     12'h509:atomicRdVioFlag = (regRdDataChkpt   !=  csr_cause     );  
     12'h50a:atomicRdVioFlag = (regRdDataChkpt   !=  csr_status    );   
     12'h50b:atomicRdVioFlag = (regRdDataChkpt   !=  csr_hartid    );   
@@ -654,8 +667,10 @@ begin
     `CSR_MEDELEG   :atomicRdVioFlag = (regRdDataChkpt   !=  csr_medeleg   );
     `CSR_MIDELEG   :atomicRdVioFlag = (regRdDataChkpt   !=  csr_mideleg   );
     `CSR_MIE       :atomicRdVioFlag = (regRdDataChkpt   !=  csr_mie       );
+    `CSR_MTVEC     : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mtvec     );
     `CSR_MEPC      : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mepc      );
     `CSR_SSTATUS   : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mstatus & SSTATUS_READ_MASK);
+    `CSR_STVEC     : atomicRdVioFlag = (regRdDataChkpt  !=  csr_stvec     );
     `CSR_SATP      :atomicRdVioFlag = (regRdDataChkpt   !=  csr_satp      );
     `CSR_SEPC      : atomicRdVioFlag = (regRdDataChkpt  !=  csr_sepc      );
     default:atomicRdVioFlag = 1'b0;
