@@ -111,6 +111,12 @@ localparam logic [`CSR_WIDTH-1:0] MIE_MASK = (
     `MIP_MTIP |
     `MIP_MEIP );
 
+// MSIP, MTIP and MEIP bits are read only in MIP.
+localparam logic [`CSR_WIDTH-1:0] MIP_MASK = (
+  `MIP_SSIP |
+  `MIP_STIP |
+  `MIP_SEIP );
+
 localparam logic [`CSR_WIDTH-1:0] MIDELEG_MASK = (
     `MIP_SSIP |
     `MIP_STIP |
@@ -177,6 +183,7 @@ logic [`CSR_WIDTH-1:0]  csr_mstatus;
 logic [`CSR_WIDTH-1:0]  csr_medeleg;
 logic [`CSR_WIDTH-1:0]  csr_mideleg;
 logic [`CSR_WIDTH-1:0]  csr_mie;
+logic [`CSR_WIDTH-1:0]  csr_mip;
 logic [`CSR_WIDTH-1:0]  csr_mepc;
 logic [`CSR_WIDTH-1:0]  csr_mtvec;
 logic [`CSR_WIDTH-1:0]  csr_stvec;
@@ -217,12 +224,15 @@ logic                        wr_csr_mstatus   ;
 logic                        wr_csr_medeleg   ;
 logic                        wr_csr_mideleg   ;
 logic                        wr_csr_mie       ;
+logic                        wr_csr_mip       ;
 logic                        wr_csr_mtvec     ;
 logic                        wr_csr_mepc      ;
 logic                        wr_csr_sstatus   ;
 logic                        wr_csr_stvec     ;
 logic                        wr_csr_satp  ;
 logic                        wr_csr_sepc      ;
+logic                        wr_csr_sie       ;
+logic                        wr_csr_sip       ;
 
 logic [`CSR_WIDTH-1:0]  csr_epc_next; 
 logic [`CSR_WIDTH-1:0]  csr_mepc_next;
@@ -371,12 +381,15 @@ begin
   wr_csr_medeleg   =  1'b0;
   wr_csr_mideleg   =  1'b0;
   wr_csr_mie       =  1'b0;
+  wr_csr_mip       =  1'b0;
   wr_csr_mtvec     =  1'b0;
   wr_csr_mepc      =  1'b0;
   wr_csr_sstatus   =  1'b0;
   wr_csr_stvec     =  1'b0;
   wr_csr_satp      =  1'b0;
   wr_csr_sepc      =  1'b0;
+  wr_csr_sie       =  1'b0;
+  wr_csr_sip       =  1'b0;
   clear_irq_vector =  64'b0;
 
   // Write the register when the CSR instruction commits
@@ -420,12 +433,15 @@ begin
       `CSR_MEDELEG: wr_csr_medeleg = 1'b1;
       `CSR_MIDELEG: wr_csr_mideleg = 1'b1;
       `CSR_MIE: wr_csr_mie     = 1'b1;
+      `CSR_MIP        : wr_csr_mip        = 1'b1;
       `CSR_MTVEC      : wr_csr_mtvec      = 1'b1;
       `CSR_MEPC       : wr_csr_mepc       = 1'b1;
       `CSR_SSTATUS    : wr_csr_sstatus    = 1'b1;
       `CSR_STVEC      : wr_csr_stvec      = 1'b1;
       `CSR_SATP:wr_csr_satp  = 1'b1;
       `CSR_SEPC       : wr_csr_sepc       = 1'b1;
+      `CSR_SIE        : wr_csr_sie        = 1'b1;
+      `CSR_SIP        : wr_csr_sip        = 1'b1;
     endcase
   end
 end
@@ -469,6 +485,7 @@ begin
     csr_mie       <=  `CSR_WIDTH'b0;
     csr_mtvec     <=  `CSR_WIDTH'b0; //TODO: reset to boot address
     csr_mepc      <=  `CSR_WIDTH'b0;
+    csr_mip       <=  `CSR_WIDTH'b0;
     csr_stvec     <=  `CSR_WIDTH'b0;
     csr_satp      <=  `CSR_WIDTH'b0;
     csr_sepc      <=  `CSR_WIDTH'b0;
@@ -519,6 +536,9 @@ begin
     if (wr_csr_mie) begin
       csr_mie <= (regWrDataCommit & MIE_MASK) | (csr_mie & ~MIE_MASK);
     end
+    if (wr_csr_mip) begin
+      csr_mip <= (regWrDataCommit & MIP_MASK) | (csr_mip & ~MIP_MASK);
+    end
     csr_mtvec     <=  wr_csr_mtvec     ? {regWrDataCommit[`CSR_WIDTH-1:2], 1'b0, regWrDataCommit[0]}: csr_mtvec;
     csr_mepc      <=  wr_csr_mepc      ? {regWrDataCommit[`CSR_WIDTH-1:1], 1'b0} : csr_mepc_next;
     csr_stvec     <=  wr_csr_stvec     ? {regWrDataCommit[`CSR_WIDTH-1:2], 1'b0, regWrDataCommit[0]}: csr_stvec;
@@ -531,6 +551,16 @@ begin
       //end
     end
     csr_sepc      <=  wr_csr_sepc      ? {regWrDataCommit[`CSR_WIDTH-1:1], 1'b0} : csr_sepc_next;
+
+    // MIE and MIP bits can be set by Supervisor mode, if they are set in MIDELEG
+    if (wr_csr_sie) begin
+      csr_mie <= (regWrDataCommit & csr_mideleg) | (csr_mie & ~csr_mideleg);
+    end
+    if (wr_csr_sip) begin
+      // STIP and SEIP are read only in SIP
+      csr_mip <= (regWrDataCommit & (`MIP_SSIP & csr_mideleg))
+        | (csr_mip & ~(`MIP_SSIP & csr_mideleg));
+    end
 
   end
 end
@@ -614,6 +644,7 @@ begin
     `CSR_MEDELEG   : regRdData_o = csr_medeleg;
     `CSR_MIDELEG   : regRdData_o = csr_mideleg;
     `CSR_MIE       : regRdData_o = csr_mie;
+    `CSR_MIP        : regRdData_o = csr_mip;
     `CSR_MTVEC      : regRdData_o = csr_mtvec;
     `CSR_MEPC       : regRdData_o = csr_mepc;
     `CSR_SSTATUS    : regRdData_o = csr_mstatus & SSTATUS_READ_MASK;
@@ -626,6 +657,8 @@ begin
       regRdData_o   =  csr_satp;
     end
     `CSR_SEPC       : regRdData_o = csr_sepc;
+    `CSR_SIE        : regRdData_o = csr_mie & csr_mideleg;
+    `CSR_SIP        : regRdData_o = csr_mip & csr_mideleg;
     default:regRdData_o   =  `CSR_WIDTH'bx;
   endcase  
 end
@@ -667,12 +700,15 @@ begin
     `CSR_MEDELEG   :atomicRdVioFlag = (regRdDataChkpt   !=  csr_medeleg   );
     `CSR_MIDELEG   :atomicRdVioFlag = (regRdDataChkpt   !=  csr_mideleg   );
     `CSR_MIE       :atomicRdVioFlag = (regRdDataChkpt   !=  csr_mie       );
+    `CSR_MIP       : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mip       );
     `CSR_MTVEC     : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mtvec     );
     `CSR_MEPC      : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mepc      );
     `CSR_SSTATUS   : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mstatus & SSTATUS_READ_MASK);
     `CSR_STVEC     : atomicRdVioFlag = (regRdDataChkpt  !=  csr_stvec     );
     `CSR_SATP      :atomicRdVioFlag = (regRdDataChkpt   !=  csr_satp      );
     `CSR_SEPC      : atomicRdVioFlag = (regRdDataChkpt  !=  csr_sepc      );
+    `CSR_SIE       : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mie & csr_mideleg);
+    `CSR_SIP       : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mip & csr_mideleg);
     default:atomicRdVioFlag = 1'b0;
   endcase  
 end
