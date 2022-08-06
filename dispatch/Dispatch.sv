@@ -322,6 +322,7 @@ begin
 		alPacket_o[i].isScall        = disPacket_i[i].isScall;
 		alPacket_o[i].isSbreak       = disPacket_i[i].isSbreak;
 		alPacket_o[i].isSret         = disPacket_i[i].isSret;   
+		alPacket_o[i].isMret         = disPacket_i[i].isMret;
 		alPacket_o[i].isFP           = isFP[i];	 	//Changes: Mohit (Additional FP flag added to ActiveList and passed from Dispatch) 
 		alPacket_o[i].valid          = disPacket_i[i].valid & ~stall; // Write to AL even if exception
 	end

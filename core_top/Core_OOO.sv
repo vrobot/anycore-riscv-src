@@ -355,6 +355,7 @@ reg  [`CSR_WIDTH-1:0]        	  csr_status;		//Changes: Mohit (Checks FP_DISABLE
 reg  [`CSR_WIDTH-1:0]        	  csr_frm;		//Changes: Mohit (Used in FP-unit for dynamic rounding mode)
 reg  [`CSR_WIDTH-1:0]        	  csr_fflags;		//Changes: Mohit (Updated at retire in SupRegFile based on fp_exception)
 reg                               sretFlag;
+reg                               mretFlag;
 
 bypassPkt                         bypassPacket [0:`ISSUE_WIDTH-1];
 bypassPkt                         bypassPacket_a1 [0:`ISSUE_WIDTH-1];
@@ -1128,7 +1129,7 @@ SupRegFile supregisterfile (
   .stCommitAddr_i       (stCommitAddr),
   .ldCommitAddr_i       (ldCommitAddr),
   .sretFlag_i           (sretFlag),
-  .mretFlag_i           (),
+  .mretFlag_i           (mretFlag),
 
   .csr_fflags_i		(csr_fflags),		//Changes: Mohit (Update CSR_FFLAGS at retire)
 
@@ -1716,6 +1717,7 @@ ActiveList activeList(
   .csr_epc_i            (csr_epc),
   .csr_evec_i           (csr_evec),
   .sretFlag_o           (sretFlag),
+  .mretFlag_o           (mretFlag),
 
 	.activeListCnt_o      (activeListCnt),
 

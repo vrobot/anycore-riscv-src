@@ -95,6 +95,7 @@ module ActiveList (
   input  [`SIZE_PC-1:0]                  csr_evec_i,
   input  [`SIZE_PC-1:0]                  csr_epc_i,
   output                                 sretFlag_o,
+  output                                 mretFlag_o,
 
 	/* input  [`SIZE_ACTIVELIST_LOG:0]        ldViolationPacket_i, */
 
@@ -157,6 +158,7 @@ reg                                 violateFlag_reg;
 reg                                 fissionViolation;
 
 reg                                 sretFlag [0:`COMMIT_WIDTH-1];
+reg                                 mretFlag [0:`COMMIT_WIDTH-1];
 reg                                 csrViolateFlag [0:`COMMIT_WIDTH-1];
 
 reg  [`SIZE_PC-1:0]                 recoverPC;
@@ -1012,9 +1014,10 @@ begin
 
     csrViolateFlag[i] = csrViolateFlag_i & commitReady[i] & dataAl[i].isCSR;
 
-    // Prevent an sret instruction from retiring until it is at the head of the activeList.
-    // Also prevent any instruction after the sret to retire.
+    // Prevent an xret instruction from retiring until it is at the head of the activeList.
+    // Also prevent any instruction after the xret to retire.
     sretFlag[i] = dataAl[i].isSret & commitReady[i];
+    mretFlag[i] = dataAl[i].isMret & commitReady[i];
 
 	/* The mispredict flag is used to mark a misprediction.
 	 * An instruction with the mispredict bit set commits only at 
@@ -1037,6 +1040,7 @@ begin
 end
 
 assign sretFlag_o = sretFlag[0];
+assign mretFlag_o = mretFlag[0];
 
 logic [`COMMIT_WIDTH-1:0] htifCommitMask;
 logic [6:0]               instret;
@@ -1106,7 +1110,7 @@ begin:COMMIT
 `endif
 
   // LANE: Per Lane Logic
-  // The instruction at the head of the AL commits in cases of misprediction and an SRET instructions.
+  // The instruction at the head of the AL commits in cases of misprediction and an xRET instruction.
   // In all other cases, it is squashed along with everything else.
 	commitVector_f[0] = (alCount > 0) & commitReady[0] & ~violateFlag[0] & ~csrViolateFlag[0]  & ~exceptionFlag[0];
 
@@ -1115,6 +1119,7 @@ begin:COMMIT
 		commitVector_f[i] = ( alCount > i) & commitReady[i] & 
                           ~mispredFlag[i] & ~mispredFlag[0] &
                           ~sretFlag[i]    & ~sretFlag[0] &
+                          ~mretFlag[i]    & ~mretFlag[0] &
 		                      ~violateFlag[i] & ~csrViolateFlag[i] & 
                           ~exceptionFlag[i];
 	end
@@ -1319,7 +1324,7 @@ begin
 
     /* Maintain the active list occupancy count each cycle */
     // TODO: Why is the count reset one cycle in advance
-	  if ((violateFlag[0] | csrViolateFlag[0] | mispredFlag[0] | sretFlag[0] | exceptionFlag[0] | interruptPulse) & ~stallStCommit_i) // Delay recovery until ready to commit again
+	  if ((violateFlag[0] | csrViolateFlag[0] | mispredFlag[0] | sretFlag[0] | mretFlag[0] |exceptionFlag[0] | interruptPulse) & ~stallStCommit_i) // Delay recovery until ready to commit again
 	  	alCount <= 0;
 	  else if (violateFlag_reg | mispredFlag_reg | exceptionFlag_reg)
 	  	alCount <= 0;
@@ -1392,8 +1397,8 @@ begin
 		  	atomicityViolation  <= 1'b1;
 		  end
 
-      // Use a delayed version of the sretFlag to allow the SRET instruction to commit
-		  if (sretFlag[0] & ~stallStCommit_i)
+      // Use a delayed version of the xretFlag to allow the xRET instruction to commit
+		  if (sretFlag[0] & ~stallStCommit_i || mretFlag[0] & ~stallStCommit_i)
 		  begin
 		  	violateFlag_reg     <= 1'b1;
 		  	recoverPC           <= csr_epc_i;

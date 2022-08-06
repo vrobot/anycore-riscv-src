@@ -67,6 +67,7 @@ reg                                     instCSR_0;
 reg                                     instScall_0;
 reg                                     instSbreak_0;
 reg                                     instSret_0;
+reg                                     instMret_0;
 reg                                     instSkipIQ_0;
 reg [`EXCEPTION_CAUSE_LOG-1:0]               instExceptionCause_0; 
 reg                                     instException_0;
@@ -93,6 +94,7 @@ begin
     ibPacket0_o.isScall        = instScall_0;
     ibPacket0_o.isSbreak       = instSbreak_0;
     ibPacket0_o.isSret         = instSret_0;
+    ibPacket0_o.isMret         = instMret_0;
     ibPacket0_o.skipIQ         = instSkipIQ_0;
     ibPacket0_o.ldstSize       = instldstSize_0;
     ibPacket0_o.ctrlType       = decPacket_i.ctrlType;
@@ -152,6 +154,7 @@ begin
   instScall_0      = 0;
   instSbreak_0     = 0;
   instSret_0       = 0;
+  instMret_0       = 0;
   instExceptionCause_0    = 0;
   instException_0    = 0;
 
@@ -347,6 +350,10 @@ begin
                    end
                    `FN12_SRET  : begin
                      instSret_0   = 1'b1;
+                     instCSR_0    = 1'b0; //Do not read or write any CSRs, neither is it dispatched atomically
+                   end
+                   `FN12_MRET  : begin
+                     instMret_0   = 1'b1;
                      instCSR_0    = 1'b0; //Do not read or write any CSRs, neither is it dispatched atomically
                    end
                   endcase

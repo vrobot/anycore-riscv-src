@@ -121,6 +121,7 @@ typedef struct packed {
 	logic                                 isScall;
 	logic                                 isSbreak;
 	logic                                 isSret;
+	logic                                 isMret;
 	logic                                 skipIQ;
 
 	logic [`BRANCH_TYPE_LOG-1:0]          ctrlType;
@@ -163,6 +164,7 @@ typedef struct packed {
 	logic                                 isScall;
 	logic                                 isSbreak;
 	logic                                 isSret;
+	logic                                 isMret;
 	logic                                 skipIQ;
 
 	logic [`BRANCH_TYPE_LOG-1:0]          ctrlType;
@@ -235,6 +237,7 @@ typedef struct packed {
 	logic                                 isScall;
 	logic                                 isSbreak;
 	logic                                 isSret;
+	logic                                 isMret;
 	logic                                 isFP;	//Changes: Mohit(Added isFP flag to alpacket)
 
   logic                                 valid;

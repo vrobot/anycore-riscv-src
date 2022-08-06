@@ -230,6 +230,10 @@ begin:ALU_OPERATION
                begin
                    flags.executed          = 1'h1;
                end
+               `FN12_MRET:
+               begin
+                   flags.executed          = 1'h1;
+               end
             endcase
             end
 

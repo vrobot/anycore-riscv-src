@@ -134,6 +134,7 @@ begin
     renPacket_o[i].isScall      = instBufferReady_o & instValidMask[i] & renPacket_t[i].isScall      ; 
     renPacket_o[i].isSbreak     = instBufferReady_o & instValidMask[i] & renPacket_t[i].isSbreak     ; 
     renPacket_o[i].isSret       = instBufferReady_o & instValidMask[i] & renPacket_t[i].isSret       ; 
+    renPacket_o[i].isMret       = instBufferReady_o & instValidMask[i] & renPacket_t[i].isMret       ;
     renPacket_o[i].skipIQ       = instBufferReady_o & instValidMask[i] & renPacket_t[i].skipIQ       ; 
   end
 end
