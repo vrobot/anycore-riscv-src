@@ -20,7 +20,6 @@
 `define STRUCTS_SVH
 
 `include "CommonConfig.h"
-`include "RISCV_ISA.h"
 
 `ifdef DYNAMIC_CONFIG
 

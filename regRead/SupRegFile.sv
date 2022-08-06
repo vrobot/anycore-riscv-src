@@ -41,7 +41,12 @@ module SupRegFile (
   input        [`SIZE_VIRT_ADDR-1:0]  stCommitAddr_i,
   input        [`SIZE_VIRT_ADDR-1:0]  ldCommitAddr_i,
   input                               sretFlag_i,
+  input                               mretFlag_i,
   input        [`CSR_WIDTH-1:0]	      csr_fflags_i,
+
+  input  [1:0]                        irq_i,      // level sensitive IR lines, mip & sip (async)
+  input                               ipi_i,      // software interrupt (a.k.a inter-process-interrupt)
+  input                               time_irq_i, // Timer interrupts
 
   input        [`CSR_WIDTH-1:0]       hartId_i, // hart id in multicore environment
 
@@ -96,59 +101,7 @@ module SupRegFile (
 //`define RISCV_PGSIZE        (1 << `RISCV_PGSHIFT)
 
 
-//typedef enum logic [1:0] {
-//    USER_PRIVILEGE = 2'b00,
-//    SUPERVISOR_PRIVILEGE = 2'b01,
-//    //reserved
-//    MACHINE_PRIVILEGE = 2'b11
-//} privilege_t;
 
-localparam logic [`CSR_WIDTH-1:0] MIE_MASK = (
-    `MIP_SSIP |
-    `MIP_STIP |
-    `MIP_SEIP |
-    `MIP_MSIP |
-    `MIP_MTIP |
-    `MIP_MEIP );
-
-// MSIP, MTIP and MEIP bits are read only in MIP.
-localparam logic [`CSR_WIDTH-1:0] MIP_MASK = (
-  `MIP_SSIP |
-  `MIP_STIP |
-  `MIP_SEIP );
-
-localparam logic [`CSR_WIDTH-1:0] MIDELEG_MASK = (
-    `MIP_SSIP |
-    `MIP_STIP |
-    `MIP_SEIP );
-
-localparam logic [`CSR_WIDTH-1:0] MEDELEG_MASK = (
-    (1 << `CAUSE_MISALIGNED_FETCH ) |
-    (1 << `CAUSE_BREAKPOINT       ) |
-    (1 << `CAUSE_ECALL_UMODE      ) |
-    (1 << `CAUSE_INST_PAGE_FAULT  ) |
-    (1 << `CAUSE_LOAD_PAGE_FAULT  ) |
-    (1 << `CAUSE_STORE_PAGE_FAULT ) );
-
-localparam logic [`CSR_WIDTH-1:0] SSTATUS_READ_MASK = (
-     `SSTATUS_SIE  |
-     `SSTATUS_SPIE |
-     `SSTATUS_UBE  |
-     `SSTATUS_SPP  |
-     `SSTATUS_FS   |
-     `SSTATUS_XS   |
-     `SSTATUS_SUM  |
-     `SSTATUS_MXR  |
-     `SSTATUS_UXL  |
-     `SSTATUS_SD   );
-
-localparam logic [`CSR_WIDTH-1:0] SSTATUS_WRITE_MASK = (
-     `SSTATUS_SIE  |
-     `SSTATUS_SPIE |
-     `SSTATUS_SPP  |
-     `SSTATUS_FS   |
-     `SSTATUS_SUM  |
-     `SSTATUS_MXR  );
 
 /*Original CSRs*/
 logic [`CSR_WIDTH-1:0]  csr_fcsr;
@@ -179,7 +132,7 @@ logic [`CSR_WIDTH-1:0]  csr_cycleh;
 logic [`CSR_WIDTH-1:0]  csr_timeh; 
 logic [`CSR_WIDTH-1:0]  csr_instreth;
 /* New CSRs */
-logic [`CSR_WIDTH-1:0]  csr_mstatus;
+status_t                csr_mstatus;
 logic [`CSR_WIDTH-1:0]  csr_medeleg;
 logic [`CSR_WIDTH-1:0]  csr_mideleg;
 logic [`CSR_WIDTH-1:0]  csr_mie;
@@ -191,6 +144,8 @@ logic [`CSR_WIDTH-1:0]  csr_stvec;
 logic [`CSR_WIDTH-1:0]  csr_scause;
 logic [`CSR_WIDTH-1:0]  csr_satp;
 logic [`CSR_WIDTH-1:0]  csr_sepc;
+
+privilege_t priv_lvl;
 
 logic                        wr_csr_fflags    ;
 logic                        wr_csr_frm       ;
@@ -260,8 +215,23 @@ logic 			regWrValid; //Changes: Mohit (Ensures correct regWrite irrespective of 
 logic                        atomicRdVioFlag;
 logic [7:0]                  interrupts;
 
-assign interrupts = ((csr_status & `SR_IP) >> `SR_IP_SHIFT) & (csr_status >> `SR_IM_SHIFT);
-assign interruptPending_o = (|interrupts) & (|(csr_status & `SR_EI)); //If interrupt enabled and interrupts pending
+
+// IRQ pending logic
+// if any irq is enabled, and pending and irqs are enabled globally
+always_comb begin
+  if (priv_lvl == MACHINE_PRIVILEGE) begin
+    interruptPending_o = (| csr_mie & csr_mip) && (csr_mstatus.mie);
+  end
+
+  // in S and U mode, if the irq needs to be delegated with mideleg
+  if (priv_lvl == SUPERVISOR_PRIVILEGE) begin
+    interruptPending_o = (| csr_mie & csr_mip & csr_mideleg) && (csr_mstatus.sie);
+  end
+
+  if (priv_lvl == USER_PRIVILEGE) begin
+    interruptPending_o = (| csr_mie & csr_mip & csr_mideleg); // no UIE bit in mstatus
+  end
+end
 
 always_comb begin
   if (sretFlag_i) begin
@@ -661,7 +631,11 @@ begin
     `CSR_MEDELEG   : regRdData_o = csr_medeleg;
     `CSR_MIDELEG   : regRdData_o = csr_mideleg;
     `CSR_MIE       : regRdData_o = csr_mie;
-    `CSR_MIP        : regRdData_o = csr_mip;
+    // "When MIP is read with a CSR instruction,
+    // the value of the SEIP bit returned (...) is the logical-OR
+    // of the software-writable bit and the interrupt signal from the
+    // interrupt controller "
+    `CSR_MIP        : regRdData_o = csr_mip | (irq_i[1] << `IRQ_S_EXT);
     `CSR_MCAUSE     : regRdData_o = csr_mcause;
     `CSR_MTVEC      : regRdData_o = csr_mtvec;
     `CSR_MEPC       : regRdData_o = csr_mepc;
@@ -677,7 +651,9 @@ begin
     end
     `CSR_SEPC       : regRdData_o = csr_sepc;
     `CSR_SIE        : regRdData_o = csr_mie & csr_mideleg;
-    `CSR_SIP        : regRdData_o = csr_mip & csr_mideleg;
+    // same as MIP, but the delegation needs to be checked
+    `CSR_SIP        : regRdData_o = (csr_mip & csr_mideleg)
+        | ((irq_i[1] & csr_mideleg[`IRQ_S_EXT]) << `IRQ_S_EXT);
     default:regRdData_o   =  `CSR_WIDTH'bx;
   endcase  
 end

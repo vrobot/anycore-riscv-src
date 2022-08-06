@@ -92,6 +92,10 @@ module Core_OOO(
   input                               mem2dcStComplete_i,
   input                               mem2dcStStall_i,
 
+  input  [1:0]                        irq_i,      // level sensitive IR lines, mip & sip (async)
+  input                               ipi_i,      // software interrupt (a.k.a inter-process-interrupt)
+  input                               time_irq_i, // Timer interrupts
+
   input [`CSR_WIDTH-1:0]              hartId_i, // hart id for multicore environment
 
   input [`DCACHE_INDEX_BITS+`DCACHE_BYTES_IN_LINE_LOG-1:0]  dcScratchWrAddr_i,
@@ -1124,8 +1128,13 @@ SupRegFile supregisterfile (
   .stCommitAddr_i       (stCommitAddr),
   .ldCommitAddr_i       (ldCommitAddr),
   .sretFlag_i           (sretFlag),
+  .mretFlag_i           (),
 
   .csr_fflags_i		(csr_fflags),		//Changes: Mohit (Update CSR_FFLAGS at retire)
+
+  .irq_i              ( irq_i ),
+  .ipi_i              ( ipi_i ),
+  .time_irq_i         ( timer_irq_i ),
 
   .hartId_i                     , // constant
 

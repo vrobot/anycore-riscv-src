@@ -1,7 +1,7 @@
 +incdir+ISA
 +incdir+include
 +incdir+configs
-ISA/RISCV_ISA.h
+ISA/RISCV_ISA.sv
 configs/CommonConfig.h
 configs/RAM_Params.h
 include/structs.sv

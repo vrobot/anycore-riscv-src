@@ -68,6 +68,10 @@ module AnyCore_Piton(
 
   input                             anycore_int,
 
+  input  [1:0]                        irq_i,      // level sensitive IR lines, mip & sip (async)
+  input                               ipi_i,      // software interrupt (a.k.a inter-process-interrupt)
+  input                               time_irq_i, // Timer interrupts
+
   input        [`CSR_WIDTH-1:0]     hartId_i, // hart id in multicore environment
 
 	);
@@ -318,6 +322,10 @@ Core_OOO coreTop(
     .reset                               (reset_sync),
     .resetFetch_i                        (resetFetch_sync),
     .toggleFlag_o                        (toggleFlag_o),
+
+    .irq_i                               ( irq_i ),
+    .ipi_i                               ( ipi_i ),
+    .time_irq_i                          ( timer_irq_i ),
     .hartId_i                                          , //constant
 
 `ifdef SCRATCH_PAD
