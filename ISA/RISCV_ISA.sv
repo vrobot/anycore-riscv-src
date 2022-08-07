@@ -203,9 +203,8 @@
 /* Minor OPCODE specified by funct12 for SYSTEM insns */
 `define FN12_SCALL          12'h000
 `define FN12_SBREAK         12'h001
-//`define FN12_SRET           12'h800
-`define FN12_MRET           12'h102
-`define FN12_SRET           12'h302
+`define FN12_SRET           12'h102
+`define FN12_MRET           12'h302
 
 /* CSR addresses */
 /* Unprivileged Floating-Point CSRs */

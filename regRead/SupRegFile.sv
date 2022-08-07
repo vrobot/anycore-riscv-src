@@ -133,6 +133,7 @@ logic [`CSR_WIDTH-1:0]  csr_timeh;
 logic [`CSR_WIDTH-1:0]  csr_instreth;
 /* New CSRs */
 status_t                csr_mstatus;
+status_t                csr_mstatus_next;
 logic [`CSR_WIDTH-1:0]  csr_medeleg;
 logic [`CSR_WIDTH-1:0]  csr_mideleg;
 logic [`CSR_WIDTH-1:0]  csr_mie;
@@ -146,6 +147,8 @@ logic [`CSR_WIDTH-1:0]  csr_satp;
 logic [`CSR_WIDTH-1:0]  csr_sepc;
 
 privilege_t priv_lvl;
+privilege_t priv_lvl_next;
+privilege_t trap_priv_lvl;
 
 logic                        wr_csr_fflags    ;
 logic                        wr_csr_frm       ;
@@ -471,6 +474,8 @@ begin
     csr_scause    <=  `CSR_WIDTH'b0;
     csr_satp      <=  `CSR_WIDTH'b0;
     csr_sepc      <=  `CSR_WIDTH'b0;
+
+    priv_lvl_next <= MACHINE_PRIVILEGE;
   end
   // Write the register when the CSR instruction commits
   else
@@ -507,8 +512,8 @@ begin
     csr_timeh     <=  wr_csr_timeh     ? regWrDataCommit : csr_timeh;
     csr_instreth  <=  wr_csr_instreth  ? regWrDataCommit : csr_instreth;
 
-    csr_mstatus   <= wr_csr_mstatus ? regWrDataCommit : csr_mstatus;
-    csr_mstatus   <= wr_csr_sstatus ? (regWrDataCommit & SSTATUS_WRITE_MASK) & (csr_mstatus & ~SSTATUS_WRITE_MASK) : csr_mstatus;
+    csr_mstatus   <= wr_csr_mstatus ? regWrDataCommit : csr_mstatus_next;
+    csr_mstatus   <= wr_csr_sstatus ? (regWrDataCommit & SSTATUS_WRITE_MASK) & (csr_mstatus & ~SSTATUS_WRITE_MASK) : csr_mstatus_next;
     if (wr_csr_medeleg) begin
       csr_medeleg <= (regWrDataCommit & MEDELEG_MASK) | (csr_medeleg & ~MEDELEG_MASK);
     end
@@ -546,20 +551,87 @@ begin
         | (csr_mip & ~(`MIP_SSIP & csr_mideleg));
     end
 
+    priv_lvl <= priv_lvl_next;
   end
 end
 
 assign set_irq_vector  = 0;
 
-assign csr_epc_next       = exceptionFlag_i ? exceptionPC_i    : csr_epc;
-//TODO: check current privilege level and only set the correct one to the input
-assign csr_mepc_next      = exceptionFlag_i ? exceptionPC_i    : csr_mepc;
-assign csr_sepc_next      = exceptionFlag_i ? exceptionPC_i    : csr_sepc;
+// Interrupt bits in MIP
+always_comb begin
+  csr_mip[`IRQ_M_EXT]   = irq_i[0];    // external irq pending
+  csr_mip[`IRQ_M_SOFT]  = ipi_i;       // software irq
+  csr_mip[`IRQ_M_TIMER] = time_irq_i;  // external timer irq
+end
+
+always_comb begin
+if (priv_lvl == MACHINE_PRIVILEGE) begin
+  csr_mepc_next      = exceptionFlag_i ? exceptionPC_i    : csr_mepc;
+  csr_mcause_next    = exceptionFlag_i ? exceptionCause_i : csr_mcause;
+end else if (priv_lvl == SUPERVISOR_PRIVILEGE) begin
+  csr_sepc_next      = exceptionFlag_i ? exceptionPC_i    : csr_sepc;
+  csr_scause_next    = exceptionFlag_i ? exceptionCause_i : csr_scause;
+end
+end
+
 assign csr_count_next     = csr_count + totalCommit_i + exceptionFlag_i;
+assign csr_epc_next       = exceptionFlag_i ? exceptionPC_i    : csr_epc;
 assign csr_cause_next     = exceptionFlag_i ? exceptionCause_i : csr_cause;
-//TODO: privilege levels
-assign csr_mcause_next    = exceptionFlag_i ? exceptionCause_i : csr_mcause;
-assign csr_scause_next    = exceptionFlag_i ? exceptionCause_i : csr_scause;
+
+// only for now
+assign trap_priv_lvl = MACHINE_PRIVILEGE;
+// Taking a trap
+always_comb begin
+  if (exceptionFlag_i) begin
+    //TODO
+    /*set trap_priv_lvl based on current priv_lvl and delegation*/
+
+    if (trap_priv_lvl == MACHINE_PRIVILEGE) begin
+      csr_mstatus_next.mpie = csr_mstatus.mie;
+      csr_mstatus_next.mie  = 1'b0; // disable interrupts
+      csr_mstatus_next.mpp  = priv_lvl;
+      //csr_mcause = exceptionCause_i //done elsewhere
+      //csr_mepc = PC                 //done elsewhere
+      //TODO set mtval/badvaddr
+
+    end
+    if (trap_priv_lvl == SUPERVISOR_PRIVILEGE) begin
+      csr_mstatus_next.spie = csr_mstatus.sie;
+      csr_mstatus_next.sie  = 0; // disable interrupts
+      csr_mstatus_next.spp  = priv_lvl;
+      //scause = exceptionCause_i //done elsewhere
+      //sepc = PC                 //done elsewhere
+      //TODO set stval/badvaddr
+    end
+  end
+end
+
+// Returning from a trap
+// return to the previous privilege level and restore all enable flags
+always_comb begin
+  if (mretFlag_i) begin
+    // get the previous machine interrupt enable flag
+    csr_mstatus_next.mie  = csr_mstatus.mpie;
+    // restore the previous privilege level
+    priv_lvl       = csr_mstatus.mpp;
+    // set mpp to user mode
+    csr_mstatus_next.mpp  = USER_PRIVILEGE;
+    csr_mstatus_next.mpie = 1'b1;
+    // set PC to mepc
+    csr_epc_o = csr_mepc;
+  end
+  if (sretFlag_i) begin
+    // return the previous supervisor interrupt enable flag
+    csr_mstatus_next.sie  = csr_mstatus.spie;
+    // restore the previous privilege level
+    priv_lvl     = {1'b0, csr_mstatus.spp}; //spp is 1 bit
+    // set spp to user mode
+    csr_mstatus_next.spp  = 1'b0;
+    csr_mstatus_next.spie = 1'b1;
+    // set PC to sepc
+    csr_epc_o = csr_sepc;
+  end
+end
 
 always_comb
 begin
