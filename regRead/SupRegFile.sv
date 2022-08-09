@@ -131,9 +131,20 @@ logic [`CSR_WIDTH-1:0]  csr_instret;
 logic [`CSR_WIDTH-1:0]  csr_cycleh;
 logic [`CSR_WIDTH-1:0]  csr_timeh; 
 logic [`CSR_WIDTH-1:0]  csr_instreth;
+
+logic [`CSR_WIDTH-1:0]  csr_epc_next;
+logic [`CSR_WIDTH-1:0]  csr_badvaddr_next;
+logic [`CSR_WIDTH-1:0]  csr_count_next;
+logic [`CSR_WIDTH-1:0]  csr_cause_next;
+logic [`CSR_WIDTH-1:0]  csr_scause_next;
+logic [`CSR_WIDTH-1:0]  csr_status_next;
+logic [`CSR_WIDTH-1:0]  irq_vector_next;
+logic [`CSR_WIDTH-1:0]  set_irq_vector;
+logic [`CSR_WIDTH-1:0]  clear_irq_vector;
 /* New CSRs */
+logic [`CSR_WIDTH-1:0]  csr_mcycle;
+logic [`CSR_WIDTH-1:0]  csr_minstret;
 status_t                csr_mstatus;
-status_t                csr_mstatus_next;
 logic [`CSR_WIDTH-1:0]  csr_medeleg;
 logic [`CSR_WIDTH-1:0]  csr_mideleg;
 logic [`CSR_WIDTH-1:0]  csr_mie;
@@ -147,6 +158,13 @@ logic [`CSR_WIDTH-1:0]  csr_sscratch;
 logic [`CSR_WIDTH-1:0]  csr_scause;
 logic [`CSR_WIDTH-1:0]  csr_satp;
 logic [`CSR_WIDTH-1:0]  csr_sepc;
+
+logic [`CSR_WIDTH-1:0]  csr_mcycle_next;
+logic [`CSR_WIDTH-1:0]  csr_minstret_next;
+status_t                csr_mstatus_next;
+logic [`CSR_WIDTH-1:0]  csr_mepc_next;
+logic [`CSR_WIDTH-1:0]  csr_mcause_next;
+logic [`CSR_WIDTH-1:0]  csr_sepc_next;
 
 privilege_t priv_lvl;
 privilege_t priv_lvl_next;
@@ -182,6 +200,8 @@ logic                        wr_csr_cycleh    ;
 logic                        wr_csr_timeh     ;
 logic                        wr_csr_instreth  ;
 
+logic                        wr_csr_mcycle    ;
+logic                        wr_csr_minstret  ;
 logic                        wr_csr_mstatus   ;
 logic                        wr_csr_medeleg   ;
 logic                        wr_csr_mideleg   ;
@@ -200,18 +220,6 @@ logic                        wr_csr_sepc      ;
 logic                        wr_csr_sie       ;
 logic                        wr_csr_sip       ;
 
-logic [`CSR_WIDTH-1:0]  csr_epc_next; 
-logic [`CSR_WIDTH-1:0]  csr_mepc_next;
-logic [`CSR_WIDTH-1:0]  csr_sepc_next;
-logic [`CSR_WIDTH-1:0]  csr_badvaddr_next; 
-logic [`CSR_WIDTH-1:0]  csr_count_next; 
-logic [`CSR_WIDTH-1:0]  csr_cause_next; 
-logic [`CSR_WIDTH-1:0]  csr_mcause_next;
-logic [`CSR_WIDTH-1:0]  csr_scause_next;
-logic [`CSR_WIDTH-1:0]  csr_status_next; 
-logic [`CSR_WIDTH-1:0]  irq_vector_next; 
-logic [`CSR_WIDTH-1:0]  set_irq_vector; 
-logic [`CSR_WIDTH-1:0]  clear_irq_vector; 
 
 logic                        regRdChkptValid;
 logic [`CSR_WIDTH_LOG-1:0]    regRdAddrChkpt;  
@@ -359,7 +367,10 @@ begin
   wr_csr_cycleh    =  1'b0;
   wr_csr_timeh     =  1'b0;
   wr_csr_instreth  =  1'b0;
+  clear_irq_vector =  64'b0;
 
+  wr_csr_mcycle    =  1'b0;
+  wr_csr_minstret  =  1'b0;
   wr_csr_mstatus   =  1'b0;
   wr_csr_medeleg   =  1'b0;
   wr_csr_mideleg   =  1'b0;
@@ -377,7 +388,6 @@ begin
   wr_csr_sepc      =  1'b0;
   wr_csr_sie       =  1'b0;
   wr_csr_sip       =  1'b0;
-  clear_irq_vector =  64'b0;
 
   // Write the register when the CSR instruction commits
   if(commitReg_i && regWrValid) //Changes: Mohit Disables reg commit write after flush
@@ -409,13 +419,15 @@ begin
         wr_csr_fromhost    = 1'b1; 
         clear_irq_vector[`IRQ_HOST+`SR_IP_SHIFT]   = 1'b1;
       end
-      12'hc00:wr_csr_cycle     = 1'b1; 
+      //12'hc00:wr_csr_cycle     = 1'b1;
       12'hc01:wr_csr_time      = 1'b1; 
-      12'hc02:wr_csr_instret   = 1'b1; 
+      //12'hc02:wr_csr_instret   = 1'b1;
       12'hc80:wr_csr_cycleh    = 1'b1; 
       12'hc81:wr_csr_timeh     = 1'b1; 
       12'hc82:wr_csr_instreth  = 1'b1; 
 
+      `CSR_MCYCLE     : wr_csr_mcycle     = 1'b1;
+      `CSR_MINSTRET   : wr_csr_instret    = 1'b1;
       `CSR_MSTATUS    : wr_csr_mstatus    = 1'b1;
       `CSR_MEDELEG: wr_csr_medeleg = 1'b1;
       `CSR_MIDELEG: wr_csr_mideleg = 1'b1;
@@ -470,6 +482,8 @@ begin
     csr_timeh     <=  `CSR_WIDTH'b0;
     csr_instreth  <=  `CSR_WIDTH'b0;
 
+    csr_mcycle     <=  `CSR_WIDTH'b0;
+    csr_minstret   <=  `CSR_WIDTH'b0;
     csr_mstatus    <=  (`MSTATUS_SXL_64 | `MSTATUS_UXL_64 ); // only set up the base ISA after reset
     csr_medeleg   <=  `CSR_WIDTH'b0;
     csr_mideleg   <=  `CSR_WIDTH'b0;
@@ -522,6 +536,8 @@ begin
     csr_timeh     <=  wr_csr_timeh     ? regWrDataCommit : csr_timeh;
     csr_instreth  <=  wr_csr_instreth  ? regWrDataCommit : csr_instreth;
 
+    csr_mcycle    <=  wr_csr_mcycle    ? regWrDataCommit : csr_mcycle_next;
+    csr_minstret  <=  wr_csr_minstret  ? regWrDataCommit : csr_minstret_next;
     csr_mstatus   <= wr_csr_mstatus ? regWrDataCommit : csr_mstatus_next;
     csr_mstatus   <= wr_csr_sstatus ? (regWrDataCommit & SSTATUS_WRITE_MASK) & (csr_mstatus & ~SSTATUS_WRITE_MASK) : csr_mstatus_next;
     if (wr_csr_medeleg) begin
@@ -589,6 +605,13 @@ end
 assign csr_count_next     = csr_count + totalCommit_i + exceptionFlag_i;
 assign csr_epc_next       = exceptionFlag_i ? exceptionPC_i    : csr_epc;
 assign csr_cause_next     = exceptionFlag_i ? exceptionCause_i : csr_cause;
+
+// totalCommit_i is the number of instructions commiting each cycle
+//assign csr_minstret_next  = csr_minstret + totalCommit_i;
+always_comb begin
+  csr_minstret_next = csr_minstret + totalCommit_i;
+  csr_mcycle_next   = csr_mcycle + 1'b1;
+end
 
 // only for now
 assign trap_priv_lvl = MACHINE_PRIVILEGE;
@@ -704,12 +727,16 @@ begin
     12'h51d:regRdData_o   =  csr_reset     ;
     12'h51e:regRdData_o   =  csr_tohost    ;
     12'h51f:regRdData_o   =  csr_fromhost  ;
-    12'hc00:regRdData_o   =  csr_cycle     ;
+    //12'hc00:regRdData_o   =  csr_cycle     ;
     12'hc01:regRdData_o   =  csr_time      ;
-    12'hc02:regRdData_o   =  csr_instret   ;
+    //12'hc02:regRdData_o   =  csr_instret   ;
     12'hc80:regRdData_o   =  csr_cycleh    ;
     12'hc81:regRdData_o   =  csr_timeh     ;
     12'hc82:regRdData_o   =  csr_instreth  ;
+    `CSR_CYCLE      : regRdData_o = csr_mcycle;
+    `CSR_INSTRET    : regRdData_o = csr_minstret;
+    `CSR_MCYCLE     : regRdData_o = csr_mcycle;
+    `CSR_MINSTRET   : regRdData_o = csr_minstret;
     `CSR_MHARTID:regRdData_o = hartId_i;
     `CSR_MSTATUS    : regRdData_o = csr_mstatus    ;
     `CSR_MEDELEG   : regRdData_o = csr_medeleg;
@@ -771,12 +798,16 @@ begin
     12'h51d:atomicRdVioFlag = (regRdDataChkpt   !=  csr_reset     );
     12'h51e:atomicRdVioFlag = (regRdDataChkpt   !=  csr_tohost    );
     12'h51f:atomicRdVioFlag = (regRdDataChkpt   !=  csr_fromhost  );
-    12'hc00:atomicRdVioFlag = (regRdDataChkpt   !=  csr_cycle     );
+    //12'hc00:atomicRdVioFlag = (regRdDataChkpt   !=  csr_cycle     );
     12'hc01:atomicRdVioFlag = (regRdDataChkpt   !=  csr_time      );
-    12'hc02:atomicRdVioFlag = (regRdDataChkpt   !=  csr_instret   );
+    //12'hc02:atomicRdVioFlag = (regRdDataChkpt   !=  csr_instret   );
     12'hc80:atomicRdVioFlag = (regRdDataChkpt   !=  csr_cycleh    );
     12'hc81:atomicRdVioFlag = (regRdDataChkpt   !=  csr_timeh     );
     12'hc82:atomicRdVioFlag = (regRdDataChkpt   !=  csr_instreth  );
+    `CSR_CYCLE     : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mcycle    );
+    `CSR_INSTRET   : atomicRdVioFlag = (regRdDataChkpt  !=  csr_minstret  );
+    `CSR_MCYCLE    : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mcycle    );
+    `CSR_MINSTRET  : atomicRdVioFlag = (regRdDataChkpt  !=  csr_minstret  );
     `CSR_MSTATUS   : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mstatus   );
     `CSR_MEDELEG   :atomicRdVioFlag = (regRdDataChkpt   !=  csr_medeleg   );
     `CSR_MIDELEG   :atomicRdVioFlag = (regRdDataChkpt   !=  csr_mideleg   );
