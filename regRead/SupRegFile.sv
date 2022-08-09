@@ -737,6 +737,9 @@ begin
     `CSR_INSTRET    : regRdData_o = csr_minstret;
     `CSR_MCYCLE     : regRdData_o = csr_mcycle;
     `CSR_MINSTRET   : regRdData_o = csr_minstret;
+    `CSR_MVENDORID  : regRdData_o = `CSR_WIDTH'b0; // open source
+    `CSR_MARCHID    : regRdData_o = `CSR_WIDTH'b0; // should change later
+    `CSR_MIMPID     : regRdData_o = `CSR_WIDTH'b0; // version id
     `CSR_MHARTID:regRdData_o = hartId_i;
     `CSR_MSTATUS    : regRdData_o = csr_mstatus    ;
     `CSR_MEDELEG   : regRdData_o = csr_medeleg;
@@ -808,6 +811,9 @@ begin
     `CSR_INSTRET   : atomicRdVioFlag = (regRdDataChkpt  !=  csr_minstret  );
     `CSR_MCYCLE    : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mcycle    );
     `CSR_MINSTRET  : atomicRdVioFlag = (regRdDataChkpt  !=  csr_minstret  );
+    `CSR_MVENDORID : atomicRdVioFlag = (regRdDataChkpt  !=  `CSR_WIDTH'b0 );
+    `CSR_MARCHID   : atomicRdVioFlag = (regRdDataChkpt  !=  `CSR_WIDTH'b0 );
+    `CSR_MIMPID    : atomicRdVioFlag = (regRdDataChkpt  !=  `CSR_WIDTH'b0 );
     `CSR_MSTATUS   : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mstatus   );
     `CSR_MEDELEG   :atomicRdVioFlag = (regRdDataChkpt   !=  csr_medeleg   );
     `CSR_MIDELEG   :atomicRdVioFlag = (regRdDataChkpt   !=  csr_mideleg   );
