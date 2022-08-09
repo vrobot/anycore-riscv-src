@@ -141,7 +141,9 @@ logic [`CSR_WIDTH-1:0]  csr_mip;
 logic [`CSR_WIDTH-1:0]  csr_mepc;
 logic [`CSR_WIDTH-1:0]  csr_mcause;
 logic [`CSR_WIDTH-1:0]  csr_mtvec;
+logic [`CSR_WIDTH-1:0]  csr_mscratch;
 logic [`CSR_WIDTH-1:0]  csr_stvec;
+logic [`CSR_WIDTH-1:0]  csr_sscratch;
 logic [`CSR_WIDTH-1:0]  csr_scause;
 logic [`CSR_WIDTH-1:0]  csr_satp;
 logic [`CSR_WIDTH-1:0]  csr_sepc;
@@ -187,9 +189,11 @@ logic                        wr_csr_mie       ;
 logic                        wr_csr_mip       ;
 logic                        wr_csr_mcause    ;
 logic                        wr_csr_mtvec     ;
+logic                        wr_csr_mscratch  ;
 logic                        wr_csr_mepc      ;
 logic                        wr_csr_sstatus   ;
 logic                        wr_csr_stvec     ;
+logic                        wr_csr_sscratch  ;
 logic                        wr_csr_scause    ;
 logic                        wr_csr_satp  ;
 logic                        wr_csr_sepc      ;
@@ -363,9 +367,11 @@ begin
   wr_csr_mip       =  1'b0;
   wr_csr_mcause    =  1'b0;
   wr_csr_mtvec     =  1'b0;
+  wr_csr_mscratch  =  1'b0;
   wr_csr_mepc      =  1'b0;
   wr_csr_sstatus   =  1'b0;
   wr_csr_stvec     =  1'b0;
+  wr_csr_sscratch  =  1'b0;
   wr_csr_scause    =  1'b0;
   wr_csr_satp      =  1'b0;
   wr_csr_sepc      =  1'b0;
@@ -417,9 +423,11 @@ begin
       `CSR_MIP        : wr_csr_mip        = 1'b1;
       `CSR_MCAUSE     : wr_csr_mcause     = 1'b1;
       `CSR_MTVEC      : wr_csr_mtvec      = 1'b1;
+      `CSR_MSCRATCH   : wr_csr_mscratch   = 1'b1;
       `CSR_MEPC       : wr_csr_mepc       = 1'b1;
       `CSR_SSTATUS    : wr_csr_sstatus    = 1'b1;
       `CSR_STVEC      : wr_csr_stvec      = 1'b1;
+      `CSR_SSCRATCH   : wr_csr_sscratch   = 1'b1;
       `CSR_SCAUSE     : wr_csr_scause     = 1'b1;
       `CSR_SATP:wr_csr_satp  = 1'b1;
       `CSR_SEPC       : wr_csr_sepc       = 1'b1;
@@ -468,9 +476,11 @@ begin
     csr_mie       <=  `CSR_WIDTH'b0;
     csr_mcause    <=  `CSR_WIDTH'b0;
     csr_mtvec     <=  `CSR_WIDTH'b0; //TODO: reset to boot address
+    csr_mscratch  <=  `CSR_WIDTH'b0;
     csr_mepc      <=  `CSR_WIDTH'b0;
     csr_mip       <=  `CSR_WIDTH'b0;
     csr_stvec     <=  `CSR_WIDTH'b0;
+    csr_sscratch  <=  `CSR_WIDTH'b0;
     csr_scause    <=  `CSR_WIDTH'b0;
     csr_satp      <=  `CSR_WIDTH'b0;
     csr_sepc      <=  `CSR_WIDTH'b0;
@@ -528,9 +538,11 @@ begin
     end
     csr_mcause    <=  wr_csr_mcause    ? regWrDataCommit : csr_mcause_next;
     csr_mtvec     <=  wr_csr_mtvec     ? {regWrDataCommit[`CSR_WIDTH-1:2], 1'b0, regWrDataCommit[0]}: csr_mtvec;
+    csr_mscratch  <=  wr_csr_mscratch  ? regWrDataCommit : csr_mscratch;
     csr_mepc      <=  wr_csr_mepc      ? {regWrDataCommit[`CSR_WIDTH-1:1], 1'b0} : csr_mepc_next;
     csr_scause    <=  wr_csr_scause    ? regWrDataCommit : csr_scause_next;
     csr_stvec     <=  wr_csr_stvec     ? {regWrDataCommit[`CSR_WIDTH-1:2], 1'b0, regWrDataCommit[0]}: csr_stvec;
+    csr_sscratch  <=  wr_csr_sscratch  ? regWrDataCommit : csr_sscratch;
     if (wr_csr_satp) begin
       //TODO
       //if(priv == S && (csr_mstatus & MSTATUS_TVM)) begin
@@ -710,9 +722,11 @@ begin
     `CSR_MIP        : regRdData_o = csr_mip | (irq_i[1] << `IRQ_S_EXT);
     `CSR_MCAUSE     : regRdData_o = csr_mcause;
     `CSR_MTVEC      : regRdData_o = csr_mtvec;
+    `CSR_MSCRATCH   : regRdData_o = csr_mscratch;
     `CSR_MEPC       : regRdData_o = csr_mepc;
     `CSR_SSTATUS    : regRdData_o = csr_mstatus & SSTATUS_READ_MASK;
     `CSR_STVEC      : regRdData_o = csr_stvec;
+    `CSR_SSCRATCH   : regRdData_o = csr_sscratch;
     `CSR_SCAUSE     : regRdData_o = csr_scause;
     `CSR_SATP      : begin
       //TODO:
@@ -770,9 +784,11 @@ begin
     `CSR_MIP       : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mip       );
     `CSR_MCAUSE    : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mcause    );
     `CSR_MTVEC     : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mtvec     );
+    `CSR_MSCRATCH  : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mscratch  );
     `CSR_MEPC      : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mepc      );
     `CSR_SSTATUS   : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mstatus & SSTATUS_READ_MASK);
     `CSR_STVEC     : atomicRdVioFlag = (regRdDataChkpt  !=  csr_stvec     );
+    `CSR_SSCRATCH  : atomicRdVioFlag = (regRdDataChkpt  !=  csr_sscratch  );
     `CSR_SCAUSE    : atomicRdVioFlag = (regRdDataChkpt  !=  csr_scause    );
     `CSR_SATP      :atomicRdVioFlag = (regRdDataChkpt   !=  csr_satp      );
     `CSR_SEPC      : atomicRdVioFlag = (regRdDataChkpt  !=  csr_sepc      );
