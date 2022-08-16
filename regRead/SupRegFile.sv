@@ -19,7 +19,9 @@
 `timescale 1ns/100ps
 
 
-module SupRegFile (
+module SupRegFile #(
+  parameter BOOT_ADDRESS = 32'h8000_0000 // default: DRAM base address
+)(
 
 	input                               clk,
 	input                               reset,
@@ -489,7 +491,7 @@ begin
     csr_mideleg   <=  `CSR_WIDTH'b0;
     csr_mie       <=  `CSR_WIDTH'b0;
     csr_mcause    <=  `CSR_WIDTH'b0;
-    csr_mtvec     <=  `CSR_WIDTH'b0; //TODO: reset to boot address
+    csr_mtvec     <=   BOOT_ADDRESS;
     csr_mscratch  <=  `CSR_WIDTH'b0;
     csr_mepc      <=  `CSR_WIDTH'b0;
     csr_mip       <=  `CSR_WIDTH'b0;
