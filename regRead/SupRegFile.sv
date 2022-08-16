@@ -740,8 +740,11 @@ begin
     `CSR_MVENDORID  : regRdData_o = `CSR_WIDTH'b0; // open source
     `CSR_MARCHID    : regRdData_o = `CSR_WIDTH'b0; // should change later
     `CSR_MIMPID     : regRdData_o = `CSR_WIDTH'b0; // version id
+    `CSR_MCONFIGPTR : regRdData_o = `CSR_WIDTH'b0; // config data structure does not exist
+    `CSR_MENVCFG    : regRdData_o = `CSR_WIDTH'b0; // fence handling, TODO
     `CSR_MHARTID:regRdData_o = hartId_i;
     `CSR_MSTATUS    : regRdData_o = csr_mstatus    ;
+    `CSR_MISA       : regRdData_o = MISA_VAL;
     `CSR_MEDELEG   : regRdData_o = csr_medeleg;
     `CSR_MIDELEG   : regRdData_o = csr_mideleg;
     `CSR_MIE       : regRdData_o = csr_mie;
@@ -814,7 +817,10 @@ begin
     `CSR_MVENDORID : atomicRdVioFlag = (regRdDataChkpt  !=  `CSR_WIDTH'b0 );
     `CSR_MARCHID   : atomicRdVioFlag = (regRdDataChkpt  !=  `CSR_WIDTH'b0 );
     `CSR_MIMPID    : atomicRdVioFlag = (regRdDataChkpt  !=  `CSR_WIDTH'b0 );
+    `CSR_MCONFIGPTR: atomicRdVioFlag = (regRdDataChkpt  !=  `CSR_WIDTH'b0 );
+    `CSR_MENVCFG   : atomicRdVioFlag = (regRdDataChkpt  !=  `CSR_WIDTH'b0 );
     `CSR_MSTATUS   : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mstatus   );
+    `CSR_MISA      : atomicRdVioFlag = (regRdDataChkpt  !=  MISA_VAL      );
     `CSR_MEDELEG   :atomicRdVioFlag = (regRdDataChkpt   !=  csr_medeleg   );
     `CSR_MIDELEG   :atomicRdVioFlag = (regRdDataChkpt   !=  csr_mideleg   );
     `CSR_MIE       :atomicRdVioFlag = (regRdDataChkpt   !=  csr_mie       );

@@ -17,6 +17,7 @@
 *******************************************************************************/
 /*Definitions for different fields of RISCV instructions */
 
+`include "CommonConfig.h"
 `define SIZE_OPCODE_P             7  /*Major OPCODE size in spec */
 
 `define SIZE_FUNCT3               3  /*Funct3 (minor opcode) */
@@ -231,6 +232,7 @@
 `define CSR_MARCHID         12'hf12
 `define CSR_MIMPID          12'hf13
 `define CSR_MHARTID         12'hf14
+`define CSR_MCONFIGPTR      12'hf15
 `define CSR_MSTATUS         12'h300
 `define CSR_MISA            12'h301
 `define CSR_MEDELEG         12'h302
@@ -534,3 +536,21 @@ typedef struct packed {
     logic         sie;    // supervisor interrupts enable
     logic         uie;    // user interrupts enable - hardwired to zero
 } status_t;
+
+
+// MISA
+localparam logic [`CSR_WIDTH-1:0] MISA_VAL = (
+  (`MISA_A << 0)  |
+  (`MISA_C << 2)  |
+  (`MISA_D << 3)  |
+  (`MISA_E << 4)  |
+  (`MISA_F << 5)  |
+  (`MISA_H << 7)  |
+  (`MISA_I << 8)  |
+  (`MISA_M << 12) |
+  (`MISA_Q << 16) |
+  (`MISA_S << 18) |
+  (`MISA_U << 20) |
+  (`MISA_V << 21) |
+  (`MISA_X << 23) |
+  ( 2'b10  << 62) );  // MXL
