@@ -27,6 +27,8 @@ module AnyCore_Piton(
 	//input                            resetFetch_i,
 	//input                            cacheModeOverride_i,
 
+    input [63:0]                     startPC_i,
+
   // Debug interface - separate address space, read-write from outside
   // or loopback from core pipeline.
   // Operates at ioClk
@@ -367,7 +369,7 @@ Core_OOO coreTop(
     .perfMonRegGlobalClr_i               (perfMonRegGlobalClr),                    
 `endif
 
-    .startPC_i                           (64'h0000000080000000),
+    .startPC_i                           (startPC_i),
     //.startPC_i                           (64'h00000000800000b4), //vvad
     //.startPC_i                           (64'h00000000800001fc), //masked-filter
 
