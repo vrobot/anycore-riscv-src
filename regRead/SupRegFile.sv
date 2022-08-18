@@ -19,9 +19,7 @@
 `timescale 1ns/100ps
 
 
-module SupRegFile #(
-  parameter BOOT_ADDRESS = 32'h8000_0000 // default: DRAM base address
-)(
+module SupRegFile (
 
 	input                               clk,
 	input                               reset,
@@ -51,6 +49,7 @@ module SupRegFile #(
   input                               time_irq_i, // Timer interrupts
 
   input        [`CSR_WIDTH-1:0]       hartId_i, // hart id in multicore environment
+  input        [`CSR_WIDTH-1:0]       startPC_i,// default PC after reset, saved at mtvec
 
   output logic                        atomicRdVioFlag_o,
   output logic                        interruptPending_o,
@@ -491,7 +490,7 @@ begin
     csr_mideleg   <=  `CSR_WIDTH'b0;
     csr_mie       <=  `CSR_WIDTH'b0;
     csr_mcause    <=  `CSR_WIDTH'b0;
-    csr_mtvec     <=   BOOT_ADDRESS;
+    csr_mtvec     <=   startPC_i;
     csr_mscratch  <=  `CSR_WIDTH'b0;
     csr_mepc      <=  `CSR_WIDTH'b0;
     csr_mip       <=  `CSR_WIDTH'b0;

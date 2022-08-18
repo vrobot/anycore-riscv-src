@@ -1138,6 +1138,7 @@ SupRegFile supregisterfile (
   .time_irq_i         ( timer_irq_i ),
 
   .hartId_i                     , // constant
+  .startPC_i            (startPC_i),
 
   .atomicRdVioFlag_o    (csrViolateFlag),
   .interruptPending_o   (interruptPending),
