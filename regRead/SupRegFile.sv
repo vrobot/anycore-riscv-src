@@ -58,7 +58,8 @@ module SupRegFile (
   //Changes: Mohit (Status output goes to Instruction Buffer used for checking FP_DISABLED status)	
   output       [`CSR_WIDTH-1:0]       csr_status_o,
   //Changes: Mohit (FRM register used for dynamic rounding mode)	
-  output       [`CSR_WIDTH-1:0]       csr_frm_o	
+  output       [`CSR_WIDTH-1:0]       csr_frm_o,
+  output privilege_t                  priv_lvl_o
 	);
 
 //`define SR_S              64'h0000000000000001
@@ -174,6 +175,7 @@ logic [`CSR_WIDTH-1:0]  csr_sepc_next;
 privilege_t priv_lvl;
 privilege_t priv_lvl_next;
 privilege_t trap_priv_lvl;
+assign priv_lvl_o = priv_lvl;
 
 logic                        wr_csr_fflags    ;
 logic                        wr_csr_frm       ;

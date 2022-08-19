@@ -26,6 +26,7 @@ module Decode_RISCV (
 `endif
 
     input  decPkt                     decPacket_i,
+    input privilege_t                 priv_lvl_i,
 
     output renPkt                     ibPacket0_o,
     output renPkt                     ibPacket1_o
@@ -340,7 +341,12 @@ begin
                  case(instFunct12)
                    `FN12_SCALL : begin
                      instScall_0  = 1'b1;
-                     instExceptionCause_0    = `CAUSE_SYSCALL;
+                     case (priv_lvl_i)
+                         MACHINE_PRIVILEGE:    instExceptionCause_0 = `CAUSE_ECALL_MMODE;
+                         SUPERVISOR_PRIVILEGE: instExceptionCause_0 = `CAUSE_ECALL_SMODE;
+                         USER_PRIVILEGE:       instExceptionCause_0 = `CAUSE_ECALL_UMODE;
+                         default:;
+                     endcase
                      instException_0    = 1'b1;
                    end
                    `FN12_SBREAK: begin

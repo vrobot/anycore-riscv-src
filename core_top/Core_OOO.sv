@@ -356,6 +356,7 @@ reg  [`CSR_WIDTH-1:0]        	  csr_frm;		//Changes: Mohit (Used in FP-unit for 
 reg  [`CSR_WIDTH-1:0]        	  csr_fflags;		//Changes: Mohit (Updated at retire in SupRegFile based on fp_exception)
 reg                               sretFlag;
 reg                               mretFlag;
+privilege_t                       priv_lvl;
 
 bypassPkt                         bypassPacket [0:`ISSUE_WIDTH-1];
 bypassPkt                         bypassPacket_a1 [0:`ISSUE_WIDTH-1];
@@ -740,6 +741,8 @@ Decode decode (
 	.fs2Ready_i           (fs2Ready_l1),
 
 	.decPacket_i          (decPacket_l1),
+
+    .priv_lvl_i           (priv_lvl),
 
 	.ibPacket_o           (ibPacket),
 
@@ -1147,8 +1150,8 @@ SupRegFile supregisterfile (
 
 
   .csr_status_o		(csr_status),		//Changes: Mohit (Check for FP_DISABLED)
-  .csr_frm_o		(csr_frm)		//Changes: Mohit (Pass-through to FP-ALU for dynamic rounding mode)
-
+  .csr_frm_o		(csr_frm),		//Changes: Mohit (Pass-through to FP-ALU for dynamic rounding mode)
+  .priv_lvl_o       (priv_lvl)
 );
 
 /************************************************************************************
