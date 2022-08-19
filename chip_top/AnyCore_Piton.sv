@@ -74,7 +74,7 @@ module AnyCore_Piton(
   input                               ipi_i,      // software interrupt (a.k.a inter-process-interrupt)
   input                               time_irq_i, // Timer interrupts
 
-  input        [`CSR_WIDTH-1:0]     hartId_i, // hart id in multicore environment
+  input        [`CSR_WIDTH-1:0]     hartId_i // hart id in multicore environment
 
 	);
 
