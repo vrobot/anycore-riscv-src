@@ -152,11 +152,13 @@ logic [`CSR_WIDTH-1:0]  csr_mie;
 logic [`CSR_WIDTH-1:0]  csr_mip;
 logic [`CSR_WIDTH-1:0]  csr_mepc;
 logic [`CSR_WIDTH-1:0]  csr_mcause;
+logic [`CSR_WIDTH-1:0]  csr_mtval;
 logic [`CSR_WIDTH-1:0]  csr_mtvec;
 logic [`CSR_WIDTH-1:0]  csr_mscratch;
 logic [`CSR_WIDTH-1:0]  csr_stvec;
 logic [`CSR_WIDTH-1:0]  csr_sscratch;
 logic [`CSR_WIDTH-1:0]  csr_scause;
+logic [`CSR_WIDTH-1:0]  csr_stval;
 logic [`CSR_WIDTH-1:0]  csr_satp;
 logic [`CSR_WIDTH-1:0]  csr_sepc;
 
@@ -165,6 +167,8 @@ logic [`CSR_WIDTH-1:0]  csr_minstret_next;
 status_t                csr_mstatus_next;
 logic [`CSR_WIDTH-1:0]  csr_mepc_next;
 logic [`CSR_WIDTH-1:0]  csr_mcause_next;
+logic [`CSR_WIDTH-1:0]  csr_mtval_next;
+logic [`CSR_WIDTH-1:0]  csr_stval_next;
 logic [`CSR_WIDTH-1:0]  csr_sepc_next;
 
 privilege_t priv_lvl;
@@ -209,6 +213,7 @@ logic                        wr_csr_mideleg   ;
 logic                        wr_csr_mie       ;
 logic                        wr_csr_mip       ;
 logic                        wr_csr_mcause    ;
+logic                        wr_csr_mtval     ;
 logic                        wr_csr_mtvec     ;
 logic                        wr_csr_mscratch  ;
 logic                        wr_csr_mepc      ;
@@ -216,6 +221,7 @@ logic                        wr_csr_sstatus   ;
 logic                        wr_csr_stvec     ;
 logic                        wr_csr_sscratch  ;
 logic                        wr_csr_scause    ;
+logic                        wr_csr_stval     ;
 logic                        wr_csr_satp  ;
 logic                        wr_csr_sepc      ;
 logic                        wr_csr_sie       ;
@@ -249,16 +255,14 @@ always_comb begin
   end
 end
 
-always_comb begin
-  if (sretFlag_i) begin
-    assign csr_epc_o  = csr_sepc;
-  end else begin
-    assign csr_epc_o  = csr_mepc;
-  end
-end
 
-//TODO: set to stvec or mtvec based on privilege level
-assign csr_evec_o = csr_mtvec;
+always_comb begin
+if (trap_priv_lvl == MACHINE_PRIVILEGE)
+  //only output the BASE part of xtvec
+  csr_evec_o = {csr_mtvec[`CSR_WIDTH-1:2], 2'b0};
+else if (trap_priv_lvl == SUPERVISOR_PRIVILEGE)
+  csr_evec_o = {csr_stvec[`CSR_WIDTH-1:2], 2'b0};
+end
 
 assign csr_status_o  = csr_status;	//Changes: Mohit
 assign csr_frm_o  = {{`CSR_WIDTH-3{1'b0}}, csr_fcsr[7:5]};
@@ -378,6 +382,7 @@ begin
   wr_csr_mie       =  1'b0;
   wr_csr_mip       =  1'b0;
   wr_csr_mcause    =  1'b0;
+  wr_csr_mtval     =  1'b0;
   wr_csr_mtvec     =  1'b0;
   wr_csr_mscratch  =  1'b0;
   wr_csr_mepc      =  1'b0;
@@ -385,6 +390,7 @@ begin
   wr_csr_stvec     =  1'b0;
   wr_csr_sscratch  =  1'b0;
   wr_csr_scause    =  1'b0;
+  wr_csr_stval     =  1'b0;
   wr_csr_satp      =  1'b0;
   wr_csr_sepc      =  1'b0;
   wr_csr_sie       =  1'b0;
@@ -435,6 +441,7 @@ begin
       `CSR_MIE: wr_csr_mie     = 1'b1;
       `CSR_MIP        : wr_csr_mip        = 1'b1;
       `CSR_MCAUSE     : wr_csr_mcause     = 1'b1;
+      `CSR_MTVAL      : wr_csr_mtval      = 1'b1;
       `CSR_MTVEC      : wr_csr_mtvec      = 1'b1;
       `CSR_MSCRATCH   : wr_csr_mscratch   = 1'b1;
       `CSR_MEPC       : wr_csr_mepc       = 1'b1;
@@ -442,6 +449,7 @@ begin
       `CSR_STVEC      : wr_csr_stvec      = 1'b1;
       `CSR_SSCRATCH   : wr_csr_sscratch   = 1'b1;
       `CSR_SCAUSE     : wr_csr_scause     = 1'b1;
+      `CSR_STVAL      : wr_csr_stval      = 1'b1;
       `CSR_SATP:wr_csr_satp  = 1'b1;
       `CSR_SEPC       : wr_csr_sepc       = 1'b1;
       `CSR_SIE        : wr_csr_sie        = 1'b1;
@@ -490,6 +498,7 @@ begin
     csr_mideleg   <=  `CSR_WIDTH'b0;
     csr_mie       <=  `CSR_WIDTH'b0;
     csr_mcause    <=  `CSR_WIDTH'b0;
+    csr_mtval     <=  `CSR_WIDTH'b0;
     csr_mtvec     <=   startPC_i;
     csr_mscratch  <=  `CSR_WIDTH'b0;
     csr_mepc      <=  `CSR_WIDTH'b0;
@@ -497,6 +506,7 @@ begin
     csr_stvec     <=  `CSR_WIDTH'b0;
     csr_sscratch  <=  `CSR_WIDTH'b0;
     csr_scause    <=  `CSR_WIDTH'b0;
+    csr_stval     <=  `CSR_WIDTH'b0;
     csr_satp      <=  `CSR_WIDTH'b0;
     csr_sepc      <=  `CSR_WIDTH'b0;
 
@@ -554,10 +564,12 @@ begin
       csr_mip <= (regWrDataCommit & MIP_MASK) | (csr_mip & ~MIP_MASK);
     end
     csr_mcause    <=  wr_csr_mcause    ? regWrDataCommit : csr_mcause_next;
+    csr_mtval     <=  wr_csr_mtval     ? regWrDataCommit : csr_mtval_next;
     csr_mtvec     <=  wr_csr_mtvec     ? {regWrDataCommit[`CSR_WIDTH-1:2], 1'b0, regWrDataCommit[0]}: csr_mtvec;
     csr_mscratch  <=  wr_csr_mscratch  ? regWrDataCommit : csr_mscratch;
     csr_mepc      <=  wr_csr_mepc      ? {regWrDataCommit[`CSR_WIDTH-1:1], 1'b0} : csr_mepc_next;
     csr_scause    <=  wr_csr_scause    ? regWrDataCommit : csr_scause_next;
+    csr_stval     <=  wr_csr_stval     ? regWrDataCommit : csr_stval_next;
     csr_stvec     <=  wr_csr_stvec     ? {regWrDataCommit[`CSR_WIDTH-1:2], 1'b0, regWrDataCommit[0]}: csr_stvec;
     csr_sscratch  <=  wr_csr_sscratch  ? regWrDataCommit : csr_sscratch;
     if (wr_csr_satp) begin
@@ -593,15 +605,6 @@ always_comb begin
   csr_mip[`IRQ_M_TIMER] = time_irq_i;  // external timer irq
 end
 
-always_comb begin
-if (priv_lvl == MACHINE_PRIVILEGE) begin
-  csr_mepc_next      = exceptionFlag_i ? exceptionPC_i    : csr_mepc;
-  csr_mcause_next    = exceptionFlag_i ? exceptionCause_i : csr_mcause;
-end else if (priv_lvl == SUPERVISOR_PRIVILEGE) begin
-  csr_sepc_next      = exceptionFlag_i ? exceptionPC_i    : csr_sepc;
-  csr_scause_next    = exceptionFlag_i ? exceptionCause_i : csr_scause;
-end
-end
 
 assign csr_count_next     = csr_count + totalCommit_i + exceptionFlag_i;
 assign csr_epc_next       = exceptionFlag_i ? exceptionPC_i    : csr_epc;
@@ -614,31 +617,64 @@ always_comb begin
   csr_mcycle_next   = csr_mcycle + 1'b1;
 end
 
-// only for now
-assign trap_priv_lvl = MACHINE_PRIVILEGE;
 // Taking a trap
 always_comb begin
+  // default: all traps handled at M level
+  trap_priv_lvl = MACHINE_PRIVILEGE;
+
   if (exceptionFlag_i) begin
-    //TODO
-    /*set trap_priv_lvl based on current priv_lvl and delegation*/
+    //TODO: mideleg for interrupts
+    if (csr_medeleg[ 1 << exceptionCause_i ]) begin
+      if (priv_lvl == MACHINE_PRIVILEGE)
+       // traps cannot be delegated to a
+       // less privileged mode
+       trap_priv_lvl = MACHINE_PRIVILEGE;
+      else
+        // traps in S and U mode are delegated to S mode
+        trap_priv_lvl = SUPERVISOR_PRIVILEGE;
+    end
 
     if (trap_priv_lvl == MACHINE_PRIVILEGE) begin
       csr_mstatus_next.mpie = csr_mstatus.mie;
       csr_mstatus_next.mie  = 1'b0; // disable interrupts
       csr_mstatus_next.mpp  = priv_lvl;
-      //csr_mcause = exceptionCause_i //done elsewhere
-      //csr_mepc = PC                 //done elsewhere
-      //TODO set mtval/badvaddr
-
+      csr_mcause_next       = exceptionCause_i;
+      csr_mepc_next         = exceptionPC_i;
+      case(exceptionCause_i)
+        `CAUSE_MISALIGNED_FETCH: csr_mtval_next = exceptionPC_i;
+        `CAUSE_FAULT_FETCH     : csr_mtval_next = exceptionPC_i;
+        `CAUSE_MISALIGNED_LOAD : csr_mtval_next = ldCommitAddr_i;
+        `CAUSE_MISALIGNED_STORE: csr_mtval_next = stCommitAddr_i;
+        `CAUSE_FAULT_LOAD      : csr_mtval_next = ldCommitAddr_i;
+        `CAUSE_FAULT_STORE     : csr_mtval_next = stCommitAddr_i;
+        default                : csr_mtval_next = csr_mtval;
+      endcase
     end
+
     if (trap_priv_lvl == SUPERVISOR_PRIVILEGE) begin
       csr_mstatus_next.spie = csr_mstatus.sie;
       csr_mstatus_next.sie  = 0; // disable interrupts
       csr_mstatus_next.spp  = priv_lvl;
-      //scause = exceptionCause_i //done elsewhere
-      //sepc = PC                 //done elsewhere
-      //TODO set stval/badvaddr
+      csr_scause_next       = exceptionCause_i;
+      csr_sepc_next         = exceptionPC_i;
+      case(exceptionCause_i)
+        `CAUSE_MISALIGNED_FETCH: csr_stval_next = exceptionPC_i;
+        `CAUSE_FAULT_FETCH     : csr_stval_next = exceptionPC_i;
+        `CAUSE_MISALIGNED_LOAD : csr_stval_next = ldCommitAddr_i;
+        `CAUSE_MISALIGNED_STORE: csr_stval_next = stCommitAddr_i;
+        `CAUSE_FAULT_LOAD      : csr_stval_next = ldCommitAddr_i;
+        `CAUSE_FAULT_STORE     : csr_stval_next = stCommitAddr_i;
+        default                : csr_stval_next = csr_stval;
+      endcase
     end
+    end
+  else begin // !exceptionFlag_i
+    csr_mtval_next  = csr_mtval;
+    csr_stval_next  = csr_stval;
+    csr_mcause_next = csr_mcause;
+    csr_scause_next = csr_scause;
+    csr_mepc_next   = csr_mepc;
+    csr_sepc_next   = csr_sepc;
   end
 end
 
@@ -755,13 +791,16 @@ begin
     // interrupt controller "
     `CSR_MIP        : regRdData_o = csr_mip | (irq_i[1] << `IRQ_S_EXT);
     `CSR_MCAUSE     : regRdData_o = csr_mcause;
+    `CSR_MTVAL      : regRdData_o = csr_mtval;
     `CSR_MTVEC      : regRdData_o = csr_mtvec;
     `CSR_MSCRATCH   : regRdData_o = csr_mscratch;
     `CSR_MEPC       : regRdData_o = csr_mepc;
     `CSR_SSTATUS    : regRdData_o = csr_mstatus & SSTATUS_READ_MASK;
     `CSR_STVEC      : regRdData_o = csr_stvec;
+    `CSR_SENVCFG    : regRdData_o = `CSR_WIDTH'b0;
     `CSR_SSCRATCH   : regRdData_o = csr_sscratch;
     `CSR_SCAUSE     : regRdData_o = csr_scause;
+    `CSR_STVAL      : regRdData_o = csr_stval;
     `CSR_SATP      : begin
       //TODO:
       //if(priv == S && (csr_mstatus & MSTATUS_TVM))
@@ -827,13 +866,16 @@ begin
     `CSR_MIE       :atomicRdVioFlag = (regRdDataChkpt   !=  csr_mie       );
     `CSR_MIP       : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mip       );
     `CSR_MCAUSE    : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mcause    );
+    `CSR_MTVAL     : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mtval     );
     `CSR_MTVEC     : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mtvec     );
     `CSR_MSCRATCH  : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mscratch  );
     `CSR_MEPC      : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mepc      );
     `CSR_SSTATUS   : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mstatus & SSTATUS_READ_MASK);
     `CSR_STVEC     : atomicRdVioFlag = (regRdDataChkpt  !=  csr_stvec     );
+    `CSR_SENVCFG   : atomicRdVioFlag = (regRdDataChkpt  !=  `CSR_WIDTH'b0 );
     `CSR_SSCRATCH  : atomicRdVioFlag = (regRdDataChkpt  !=  csr_sscratch  );
     `CSR_SCAUSE    : atomicRdVioFlag = (regRdDataChkpt  !=  csr_scause    );
+    `CSR_STVAL     : atomicRdVioFlag = (regRdDataChkpt  !=  csr_stval     );
     `CSR_SATP      :atomicRdVioFlag = (regRdDataChkpt   !=  csr_satp      );
     `CSR_SEPC      : atomicRdVioFlag = (regRdDataChkpt  !=  csr_sepc      );
     `CSR_SIE       : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mie & csr_mideleg);

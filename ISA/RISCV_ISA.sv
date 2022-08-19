@@ -221,6 +221,7 @@
 `define CSR_SIE             12'h104
 `define CSR_STVEC           12'h105
 `define CSR_SCOUNTEREN      12'h106
+`define CSR_SENVCFG         12'h10A
 `define CSR_SSCRATCH        12'h140
 `define CSR_SEPC            12'h141
 `define CSR_SCAUSE          12'h142
