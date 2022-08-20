@@ -248,11 +248,11 @@ always_comb begin
   end
 
   // in S and U mode, if the irq needs to be delegated with mideleg
-  if (priv_lvl == SUPERVISOR_PRIVILEGE) begin
+  else if (priv_lvl == SUPERVISOR_PRIVILEGE) begin
     interruptPending_o = (| csr_mie & csr_mip & csr_mideleg) && (csr_mstatus.sie);
   end
 
-  if (priv_lvl == USER_PRIVILEGE) begin
+  else begin // USER_PRIVILEGE
     interruptPending_o = (| csr_mie & csr_mip & csr_mideleg); // no UIE bit in mstatus
   end
 end
@@ -653,10 +653,10 @@ always_comb begin
       endcase
     end
 
-    if (trap_priv_lvl == SUPERVISOR_PRIVILEGE) begin
+    else if (trap_priv_lvl == SUPERVISOR_PRIVILEGE) begin
       csr_mstatus_next.spie = csr_mstatus.sie;
       csr_mstatus_next.sie  = 0; // disable interrupts
-      csr_mstatus_next.spp  = priv_lvl;
+      csr_mstatus_next.spp  = priv_lvl[0];
       csr_scause_next       = exceptionCause_i;
       csr_sepc_next         = exceptionPC_i;
       case(exceptionCause_i)
@@ -669,8 +669,8 @@ always_comb begin
         default                : csr_stval_next = csr_stval;
       endcase
     end
-    end
-  else begin // !exceptionFlag_i
+    else
+      csr_mstatus_next = csr_mstatus;
     csr_mtval_next  = csr_mtval;
     csr_stval_next  = csr_stval;
     csr_mcause_next = csr_mcause;
@@ -678,12 +678,9 @@ always_comb begin
     csr_mepc_next   = csr_mepc;
     csr_sepc_next   = csr_sepc;
   end
-end
 
 // Returning from a trap
-// return to the previous privilege level and restore all enable flags
-always_comb begin
-  if (mretFlag_i) begin
+  else if (mretFlag_i) begin
     // get the previous machine interrupt enable flag
     csr_mstatus_next.mie  = csr_mstatus.mpie;
     // restore the previous privilege level
@@ -694,7 +691,7 @@ always_comb begin
     // set PC to mepc
     csr_epc_o = csr_mepc;
   end
-  if (sretFlag_i) begin
+  else if (sretFlag_i) begin
     // return the previous supervisor interrupt enable flag
     csr_mstatus_next.sie  = csr_mstatus.spie;
     // restore the previous privilege level
@@ -704,6 +701,15 @@ always_comb begin
     csr_mstatus_next.spie = 1'b1;
     // set PC to sepc
     csr_epc_o = csr_sepc;
+  end
+  else begin // !exceptionFlag_i
+    csr_mstatus_next = csr_mstatus;
+    csr_mtval_next   = csr_mtval;
+    csr_stval_next   = csr_stval;
+    csr_mcause_next  = csr_mcause;
+    csr_scause_next  = csr_scause;
+    csr_mepc_next    = csr_mepc;
+    csr_sepc_next    = csr_sepc;
   end
 end
 
@@ -872,7 +878,7 @@ begin
     `CSR_MTVEC     : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mtvec     );
     `CSR_MSCRATCH  : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mscratch  );
     `CSR_MEPC      : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mepc      );
-    `CSR_SSTATUS   : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mstatus & SSTATUS_READ_MASK);
+    `CSR_SSTATUS   : atomicRdVioFlag = (regRdDataChkpt  != (csr_mstatus & SSTATUS_READ_MASK));
     `CSR_STVEC     : atomicRdVioFlag = (regRdDataChkpt  !=  csr_stvec     );
     `CSR_SENVCFG   : atomicRdVioFlag = (regRdDataChkpt  !=  `CSR_WIDTH'b0 );
     `CSR_SSCRATCH  : atomicRdVioFlag = (regRdDataChkpt  !=  csr_sscratch  );
@@ -880,8 +886,8 @@ begin
     `CSR_STVAL     : atomicRdVioFlag = (regRdDataChkpt  !=  csr_stval     );
     `CSR_SATP      :atomicRdVioFlag = (regRdDataChkpt   !=  csr_satp      );
     `CSR_SEPC      : atomicRdVioFlag = (regRdDataChkpt  !=  csr_sepc      );
-    `CSR_SIE       : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mie & csr_mideleg);
-    `CSR_SIP       : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mip & csr_mideleg);
+    `CSR_SIE       : atomicRdVioFlag = (regRdDataChkpt  !=  (csr_mie & csr_mideleg));
+    `CSR_SIP       : atomicRdVioFlag = (regRdDataChkpt  !=  (csr_mip & csr_mideleg));
     default:atomicRdVioFlag = 1'b0;
   endcase  
 end

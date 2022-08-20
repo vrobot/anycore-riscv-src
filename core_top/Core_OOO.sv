@@ -1138,7 +1138,7 @@ SupRegFile supregisterfile (
 
   .irq_i              ( irq_i ),
   .ipi_i              ( ipi_i ),
-  .time_irq_i         ( timer_irq_i ),
+  .time_irq_i         ( time_irq_i ),
 
   .hartId_i                     , // constant
   .startPC_i            (startPC_i),
