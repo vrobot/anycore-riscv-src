@@ -53,8 +53,8 @@ module SupRegFile (
 
   output logic                        atomicRdVioFlag_o,
   output logic                        interruptPending_o,
-  output       [`CSR_WIDTH-1:0]       csr_epc_o,
-  output       [`CSR_WIDTH-1:0]       csr_evec_o,
+  output reg   [`CSR_WIDTH-1:0]       csr_epc_o,
+  output reg   [`CSR_WIDTH-1:0]       csr_evec_o,
   //Changes: Mohit (Status output goes to Instruction Buffer used for checking FP_DISABLED status)	
   output       [`CSR_WIDTH-1:0]       csr_status_o,
   //Changes: Mohit (FRM register used for dynamic rounding mode)	
@@ -512,7 +512,7 @@ begin
     csr_satp      <=  `CSR_WIDTH'b0;
     csr_sepc      <=  `CSR_WIDTH'b0;
 
-    priv_lvl_next <= MACHINE_PRIVILEGE;
+    priv_lvl      <= MACHINE_PRIVILEGE;
   end
   // Write the register when the CSR instruction commits
   else
@@ -687,7 +687,7 @@ always_comb begin
     // get the previous machine interrupt enable flag
     csr_mstatus_next.mie  = csr_mstatus.mpie;
     // restore the previous privilege level
-    priv_lvl       = csr_mstatus.mpp;
+    priv_lvl_next  = csr_mstatus.mpp;
     // set mpp to user mode
     csr_mstatus_next.mpp  = USER_PRIVILEGE;
     csr_mstatus_next.mpie = 1'b1;
@@ -698,7 +698,7 @@ always_comb begin
     // return the previous supervisor interrupt enable flag
     csr_mstatus_next.sie  = csr_mstatus.spie;
     // restore the previous privilege level
-    priv_lvl     = {1'b0, csr_mstatus.spp}; //spp is 1 bit
+    priv_lvl_next = {1'b0, csr_mstatus.spp}; //spp is 1 bit
     // set spp to user mode
     csr_mstatus_next.spp  = 1'b0;
     csr_mstatus_next.spie = 1'b1;
