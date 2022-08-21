@@ -58,6 +58,11 @@ module Core_OOO(
   input  [`ICACHE_INDEX_BITS-1:0]     mem2icIndex_i,        // index of the incoming data
   input  [`ICACHE_BITS_IN_LINE-1:0]   mem2icData_i,         // requested data
   input                               mem2icRespValid_i,    // requested data is ready
+
+  input                               mem2icInv_i,          // icache invalidation
+  input  [`ICACHE_INDEX_BITS-1:0]     mem2icInvInd_i,       // icache invalidation index
+  input  [0:0]                        mem2icInvWay_i,       // icache invalidation way (unused)
+
   //input                               instCacheBypass_i,
   input                               icScratchModeEn_i,    // Should ideally be disabled by default
   input [`ICACHE_INDEX_BITS+`ICACHE_BYTES_IN_LINE_LOG-1:0]  icScratchWrAddr_i,
@@ -87,6 +92,10 @@ module Core_OOO(
   output [`SIZE_DATA-1:0]             dc2memStData_o,  // memory read address
   output [2:0]                        dc2memStSize_o,  // memory read address
   output reg                          dc2memStValid_o, // memory read enable
+
+  input                               mem2dcInv_i,     // dcache invalidation
+  input  [`DCACHE_INDEX_BITS-1:0]     mem2dcInvInd_i,  // dcache invalidation index
+  input  [0:0]                        mem2dcInvWay_i,  // dcache invalidation way (unused)
 
   // memory-to-cache interface for stores
   input                               mem2dcStComplete_i,
@@ -498,6 +507,11 @@ FetchStage1 fs1(
   .mem2icIndex_i        (mem2icIndex_i       ),        // index of the incoming data
   .mem2icData_i         (mem2icData_i        ),         // requested data
   .mem2icRespValid_i    (mem2icRespValid_i   ),    // requested data is ready
+
+  .mem2icInv_i          (mem2icInv_i),
+  .mem2icInvInd_i       (mem2icInvInd_i),
+  .mem2icInvWay_i       (mem2icInvWay_i),
+
   //.instCacheBypass_i    (instCacheBypass_i ),
   .icScratchModeEn_i    (icScratchModeEn_i),
 
@@ -1608,6 +1622,10 @@ LSU lsu (
   .dc2memStSize_o       (dc2memStSize_o     ), // memory read address
   .dc2memStValid_o      (dc2memStValid_o    ), // memory read enable
                                            
+  .mem2dcInv_i,     // dcache invalidation
+  .mem2dcInvInd_i,  // dcache invalidation index
+  .mem2dcInvWay_i,  // dcache invalidation way (unusedndex
+
   .mem2dcStComplete_i   (mem2dcStComplete_i ),
   .mem2dcStStall_i      (mem2dcStStall_i    ),
 

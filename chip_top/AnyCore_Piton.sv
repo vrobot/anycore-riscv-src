@@ -49,6 +49,10 @@ module AnyCore_Piton(
   input [`ICACHE_BITS_IN_LINE-1:0]  mem2icData_i,       // requested data
   input                             mem2icRespValid_i,  // requested data is ready
 
+  input                             mem2icInv_i,        // icache invalidation
+  input  [`ICACHE_INDEX_BITS-1:0]   mem2icInvInd_i,     // icache invalidation index
+  input  [0:0]                      mem2icInvWay_i,     // icache invalidation way (unused)
+
   // cache-to-memory interface for Loads
   output [`DCACHE_BLOCK_ADDR_BITS-1:0] dc2memLdAddr_o,  // memory read address
   output                             dc2memLdValid_o, // memory read enable
@@ -64,6 +68,10 @@ module AnyCore_Piton(
   output [`SIZE_DATA-1:0]            dc2memStData_o,
   output [2:0]                       dc2memStSize_o,
   output                             dc2memStValid_o,
+
+  input                               mem2dcInv_i,     // dcache invalidation
+  input  [`DCACHE_INDEX_BITS-1:0]     mem2dcInvInd_i,  // dcache invalidation index
+  input  [0:0]                        mem2dcInvWay_i,  // dcache invalidation way (unused)
 
   input                            mem2dcStComplete_i,
   input                            mem2dcStStall_i,
@@ -395,6 +403,11 @@ Core_OOO coreTop(
     .mem2icIndex_i                       (mem2icIndex_i    ),        // index of the incoming data
     .mem2icData_i                        (mem2icData_i     ),         // requested data
     .mem2icRespValid_i                   (mem2icRespValid_i),    // requested data is ready
+
+    .mem2icInv_i                         (mem2icInv_i),
+    .mem2icInvInd_i                      (mem2icInvInd_i),
+    .mem2icInvWay_i                      (mem2icInvWay_i),
+
     //.instCacheBypass_i                   (instCacheBypass  ),
     .icScratchModeEn_i                   (icScratchModeEn  ),
 
@@ -421,6 +434,10 @@ Core_OOO coreTop(
     .dc2memStSize_o                      (dc2memStSize_o     ), // memory read address
     .dc2memStValid_o                     (dc2memStValid_o    ), // memory read enable
                                                             
+    .mem2dcInv_i,     // dcache invalidation
+    .mem2dcInvInd_i,  // dcache invalidation index
+    .mem2dcInvWay_i,  // dcache invalidation way (unusedndex
+
     .mem2dcStComplete_i                  (mem2dcStComplete_i ),
     .mem2dcStStall_i                     (mem2dcStStall_i    ),
 

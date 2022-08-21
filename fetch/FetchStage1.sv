@@ -42,6 +42,11 @@ module FetchStage1(
     input  [`ICACHE_INDEX_BITS-1:0]  mem2icIndex_i,        // index of the incoming data
     input  [`ICACHE_BITS_IN_LINE-1:0]   mem2icData_i,         // requested data
     input                            mem2icRespValid_i,    // requested data is ready
+
+    input                            mem2icInv_i,          // icache invalidation
+    input  [`ICACHE_INDEX_BITS-1:0]  mem2icInvInd_i,       // icache invalidation index
+    input  [0:0]                     mem2icInvWay_i,       // icache invalidation way (unused)
+
     input                            icScratchModeEn_i,    // Should ideally be disabled by default
     input [`ICACHE_INDEX_BITS+`ICACHE_BYTES_IN_LINE_LOG-1:0]  icScratchWrAddr_i,
     input                                                     icScratchWrEn_i,
@@ -325,6 +330,11 @@ L1ICache l1icache(
     .mem2icIndex_i        (mem2icIndex_i       ),     // index of the incoming data
     .mem2icData_i         (mem2icData_i        ),     // requested data
     .mem2icRespValid_i    (mem2icRespValid_i   ),     // requested data is ready
+
+    .mem2icInv_i          (mem2icInv_i),
+    .mem2icInvInd_i       (mem2icInvInd_i),
+    .mem2icInvWay_i       (mem2icInvWay_i),
+
     .icScratchModeEn_i    (icScratchModeEn_i),
         
     .icScratchWrAddr_i    (icScratchWrAddr_i),
