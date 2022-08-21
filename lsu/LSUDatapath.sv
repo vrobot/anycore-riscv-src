@@ -58,6 +58,10 @@ module LSUDatapath (
   output [2:0]                        dc2memStSize_o,  // memory read address
   output reg                          dc2memStValid_o, // memory read enable
 
+  input                               mem2dcInv_i,     // dcache invalidation
+  input  [`DCACHE_INDEX_BITS-1:0]     mem2dcInvInd_i,  // dcache invalidation index
+  input  [0:0]                        mem2dcInvWay_i,  // dcache invalidation way (unused)
+
   // memory-to-cache interface for stores
   input                               mem2dcStComplete_i,
   input                               mem2dcStStall_i   ,
@@ -313,6 +317,10 @@ LDX_path_structured ldx_path (
   .dc2memStSize_o               (dc2memStSize_o     ), // memory read address
   .dc2memStValid_o              (dc2memStValid_o    ), // memory read enable
                                                    
+  .mem2dcInv_i,     // dcache invalidation
+  .mem2dcInvInd_i,  // dcache invalidation index
+  .mem2dcInvWay_i,  // dcache invalidation way (unusedndex
+
   .mem2dcStComplete_i           (mem2dcStComplete_i ),
   .mem2dcStStall_i              (mem2dcStStall_i    ),
 

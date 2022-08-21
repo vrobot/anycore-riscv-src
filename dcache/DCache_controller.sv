@@ -59,6 +59,10 @@ module DCache_controller(
     output [2:0]                        dc2memStSize_o,  // memory read address
     output reg                          dc2memStValid_o, // memory read enable
 
+    input                               mem2dcInv_i,     // dcache invalidation
+    input  [`DCACHE_INDEX_BITS-1:0]     mem2dcInvInd_i,  // dcache invalidation index
+    input  [0:0]                        mem2dcInvWay_i,  // dcache invalidation way (unused)
+
     output                              stbEmpty_o,      // Signals that there are no pending stores to be written to next level
 
     // memory-to-cache interface for stores
@@ -729,17 +733,19 @@ module DCache_controller(
       for(i = 0; i < `DCACHE_NUM_LINES;i++)
         valid_array[i] <= 1'b0;
     end
-    else
-      if(dcFlush_i)
-      begin
-        for(i = 0; i < `DCACHE_NUM_LINES;i++)
+    else if(dcFlush_i)
+    begin
+      for(i = 0; i < `DCACHE_NUM_LINES;i++)
           valid_array[i] <= 1'b0;
-      end
-      else
-      begin
-        if(fillValid)
-          valid_array[fillIndex] <= 1'b1;
-      end
+    end
+    else if(mem2dcInv_i)
+    begin
+      valid_array[mem2dcInvInd_i] <= 1'b0;
+    end
+    else if(fillValid)
+    begin
+      valid_array[fillIndex] <= 1'b1;
+    end
   end
 
   always_ff @(posedge clk)
