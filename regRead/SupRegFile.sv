@@ -244,16 +244,16 @@ logic [7:0]                  interrupts;
 // if any irq is enabled, and pending and irqs are enabled globally
 always_comb begin
   if (priv_lvl == MACHINE_PRIVILEGE) begin
-    interruptPending_o = (| csr_mie & csr_mip) && (csr_mstatus.mie);
+    interruptPending_o = (|(csr_mie & csr_mip)) && (csr_mstatus.mie);
   end
 
   // in S and U mode, if the irq needs to be delegated with mideleg
   else if (priv_lvl == SUPERVISOR_PRIVILEGE) begin
-    interruptPending_o = (| csr_mie & csr_mip & csr_mideleg) && (csr_mstatus.sie);
+    interruptPending_o = (|(csr_mie & csr_mip & csr_mideleg)) && (csr_mstatus.sie);
   end
 
   else begin // USER_PRIVILEGE
-    interruptPending_o = (| csr_mie & csr_mip & csr_mideleg); // no UIE bit in mstatus
+    interruptPending_o = (|(csr_mie & csr_mip & csr_mideleg)); // no UIE bit in mstatus
   end
 end
 
@@ -262,7 +262,7 @@ always_comb begin
 if (trap_priv_lvl == MACHINE_PRIVILEGE)
   //only output the BASE part of xtvec
   csr_evec_o = {csr_mtvec[`CSR_WIDTH-1:2], 2'b0};
-else if (trap_priv_lvl == SUPERVISOR_PRIVILEGE)
+else // SUPERVISOR_PRIVILEGE
   csr_evec_o = {csr_stvec[`CSR_WIDTH-1:2], 2'b0};
 end
 
@@ -613,17 +613,26 @@ assign csr_epc_next       = exceptionFlag_i ? exceptionPC_i    : csr_epc;
 assign csr_cause_next     = exceptionFlag_i ? exceptionCause_i : csr_cause;
 
 // totalCommit_i is the number of instructions commiting each cycle
-//assign csr_minstret_next  = csr_minstret + totalCommit_i;
 always_comb begin
   csr_minstret_next = csr_minstret + totalCommit_i;
   csr_mcycle_next   = csr_mcycle + 1'b1;
 end
 
-// Taking a trap
 always_comb begin
+  //default cases
+  csr_mstatus_next = csr_mstatus;
+  csr_mtval_next   = csr_mtval;
+  csr_stval_next   = csr_stval;
+  csr_mcause_next  = csr_mcause;
+  csr_scause_next  = csr_scause;
+  csr_mepc_next    = csr_mepc;
+  csr_sepc_next    = csr_sepc;
+  priv_lvl_next    = priv_lvl;
+
   // default: all traps handled at M level
   trap_priv_lvl = MACHINE_PRIVILEGE;
 
+  // Taking a trap
   if (exceptionFlag_i) begin
     //TODO: mideleg for interrupts
     if (csr_medeleg[ 1 << exceptionCause_i ]) begin
@@ -635,6 +644,8 @@ always_comb begin
         // traps in S and U mode are delegated to S mode
         trap_priv_lvl = SUPERVISOR_PRIVILEGE;
     end
+
+    priv_lvl_next = trap_priv_lvl;
 
     if (trap_priv_lvl == MACHINE_PRIVILEGE) begin
       csr_mstatus_next.mpie = csr_mstatus.mie;
@@ -669,18 +680,10 @@ always_comb begin
         default                : csr_stval_next = csr_stval;
       endcase
     end
-    else
-      csr_mstatus_next = csr_mstatus;
-    csr_mtval_next  = csr_mtval;
-    csr_stval_next  = csr_stval;
-    csr_mcause_next = csr_mcause;
-    csr_scause_next = csr_scause;
-    csr_mepc_next   = csr_mepc;
-    csr_sepc_next   = csr_sepc;
-  end
-
+  end // if exceptionFlag_i
+  else begin
 // Returning from a trap
-  else if (mretFlag_i) begin
+    if (mretFlag_i) begin
     // get the previous machine interrupt enable flag
     csr_mstatus_next.mie  = csr_mstatus.mpie;
     // restore the previous privilege level
@@ -688,8 +691,6 @@ always_comb begin
     // set mpp to user mode
     csr_mstatus_next.mpp  = USER_PRIVILEGE;
     csr_mstatus_next.mpie = 1'b1;
-    // set PC to mepc
-    csr_epc_o = csr_mepc;
   end
   else if (sretFlag_i) begin
     // return the previous supervisor interrupt enable flag
@@ -699,18 +700,16 @@ always_comb begin
     // set spp to user mode
     csr_mstatus_next.spp  = 1'b0;
     csr_mstatus_next.spie = 1'b1;
-    // set PC to sepc
-    csr_epc_o = csr_sepc;
   end
-  else begin // !exceptionFlag_i
-    csr_mstatus_next = csr_mstatus;
-    csr_mtval_next   = csr_mtval;
-    csr_stval_next   = csr_stval;
-    csr_mcause_next  = csr_mcause;
-    csr_scause_next  = csr_scause;
-    csr_mepc_next    = csr_mepc;
-    csr_sepc_next    = csr_sepc;
   end
+end
+
+always_comb begin
+  // mepc, sepc used as recoverPC
+  if (sretFlag_i)
+      csr_epc_o = csr_sepc;
+  else
+      csr_epc_o = csr_mepc;
 end
 
 always_comb
