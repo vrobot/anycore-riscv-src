@@ -110,6 +110,7 @@ ForwardCheck src2Bypass (
 
 
 wire [`CSR_WIDTH-1:0]             csrWrData;
+wire [`CSR_WIDTH-1:0]             csrWrEn;
 wire [`CSR_WIDTH_LOG-1:0]               csrWrAddr;
 wire                                   CSRwrValid;
 wire [`SIZE_PC-1:0]                    nextPC;
