@@ -269,36 +269,6 @@
 `define CSR_PMPADDR15       12'h3BF
 `define CSR_MCYCLE          12'hB00
 `define CSR_MINSTRET        12'hB02
-/*Original CSR addresses*/
-//`define CSR_FFLAGS          12'h001
-//`define CSR_FRM             12'h002
-//`define CSR_FCSR            12'h003
-`define CSR_STATS           12'h0c0
-`define CSR_SUP0            12'h500
-`define CSR_SUP1            12'h501
-`define CSR_EPC             12'h502
-`define CSR_BADVADDR        12'h503
-`define CSR_PTBR            12'h504
-`define CSR_ASID            12'h505
-`define CSR_COUNT           12'h506
-`define CSR_COMPARE         12'h507
-`define CSR_EVEC            12'h508
-`define CSR_CAUSE           12'h509
-`define CSR_STATUS          12'h50a
-`define CSR_HARTID          12'h50b
-`define CSR_IMPL            12'h50c
-`define CSR_FATC            12'h50d
-`define CSR_SEND_IPI        12'h50e
-`define CSR_CLEAR_IPI       12'h50f
-`define CSR_RESET           12'h51d
-`define CSR_TOHOST          12'h51e
-`define CSR_FROMHOST        12'h51f
-`define CSR_CYCLE           12'hc00
-//`define CSR_TIME            12'hc01
-//`define CSR_INSTRET         12'hc02
-`define CSR_CYCLEH          12'hc80
-`define CSR_TIMEH           12'hc81
-`define CSR_INSTRETH        12'hc82
 
 // SSTATUS CSR BITS
 `define SSTATUS_SIE   64'h0000000000000002
@@ -421,21 +391,6 @@
 `define CAUSE_INST_PAGE_FAULT         4'hc
 `define CAUSE_LOAD_PAGE_FAULT         4'hd
 `define CAUSE_STORE_PAGE_FAULT        4'hf
-
-//`define CAUSE_MISALIGNED_FETCH        4'h0
-//`define CAUSE_FAULT_FETCH             4'h1
-//`define CAUSE_ILLEGAL_INSTRUCTION     4'h2
-`define CAUSE_PRIVILEGED_INSTRUCTION  4'h3
-`define CAUSE_FP_DISABLED             4'h4
-`define CAUSE_SYSCALL                 4'h6
-//`define CAUSE_BREAKPOINT              4'h7
-//`define CAUSE_MISALIGNED_LOAD         4'h8
-//`define CAUSE_MISALIGNED_STORE        4'h9
-//`define CAUSE_FAULT_LOAD              4'ha
-//`define CAUSE_FAULT_STORE             4'hb
-`define CAUSE_ACCELERATOR_DISABLED    4'hc
-`define CAUSE_CSR_INSTRUCTION         4'hd
-
 
 /* TODO Anil : Should we have a Toggle insn */ 
 /* Instruction to test liveness of a chip */

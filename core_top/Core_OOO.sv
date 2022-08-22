@@ -360,7 +360,6 @@ reg                               csrViolateFlag;
 reg                               interruptPending;
 reg  [`SIZE_PC-1:0]               csr_epc;
 reg  [`SIZE_PC-1:0]               csr_evec;
-reg  [`CSR_WIDTH-1:0]        	  csr_status;		//Changes: Mohit (Checks FP_DISABLED status)
 reg  [`CSR_WIDTH-1:0]        	  csr_frm;		//Changes: Mohit (Used in FP-unit for dynamic rounding mode)
 reg  [`CSR_WIDTH-1:0]        	  csr_fflags;		//Changes: Mohit (Updated at retire in SupRegFile based on fp_exception)
 reg                               sretFlag;
@@ -811,8 +810,6 @@ InstructionBuffer instBuf (
 
 	.ibPacket_i           (ibPacket),
 
-	.csr_status_i	      (csr_status),	//Changes: Mohit (Check if FP_DISABLED and raise exception)
-
 	.instBufferFull_o     (instBufferFull),
 	.instBufferReady_o    (instBufferReady),
 `ifdef PERF_MON
@@ -1162,8 +1159,6 @@ SupRegFile supregisterfile (
   .csr_epc_o            (csr_epc),
   .csr_evec_o           (csr_evec),
 
-
-  .csr_status_o		(csr_status),		//Changes: Mohit (Check for FP_DISABLED)
   .csr_frm_o		(csr_frm),		//Changes: Mohit (Pass-through to FP-ALU for dynamic rounding mode)
   .priv_lvl_o       (priv_lvl)
 );

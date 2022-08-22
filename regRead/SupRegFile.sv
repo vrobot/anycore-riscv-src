@@ -55,95 +55,12 @@ module SupRegFile (
   output logic                        interruptPending_o,
   output reg   [`CSR_WIDTH-1:0]       csr_epc_o,
   output reg   [`CSR_WIDTH-1:0]       csr_evec_o,
-  //Changes: Mohit (Status output goes to Instruction Buffer used for checking FP_DISABLED status)	
-  output       [`CSR_WIDTH-1:0]       csr_status_o,
   //Changes: Mohit (FRM register used for dynamic rounding mode)	
   output       [`CSR_WIDTH-1:0]       csr_frm_o,
   output privilege_t                  priv_lvl_o
 	);
 
-//`define SR_S              64'h0000000000000001
-//`define SR_PS             64'h0000000000000002
-//`define SR_EI             64'h0000000000000004
-//`define SR_PEI            64'h0000000000000008
-//`define SR_EF             64'h0000000000000010
-//`define SR_U64            64'h0000000000000020
-//`define SR_S64            64'h0000000000000040
-//`define SR_VM             64'h0000000000000080
-//`define SR_EA             64'h0000000000000100
-//`define SR_IM             64'h0000000000FF0000
-//`define SR_IP             64'h00000000FF000000
-//`define SR_IM_SHIFT       16
-//`define SR_IP_SHIFT       24
-//localparam SR_ZERO   =         ~(`SR_S|`SR_PS|`SR_EI|`SR_PEI|`SR_EF|`SR_U64|`SR_S64|`SR_VM|`SR_EA|`SR_IM|`SR_IP);
-
-//`define IRQ_COP           2
-//`define IRQ_IPI           5
-//`define IRQ_HOST          6
-//`define IRQ_TIMER         7
-//
-//`define IMPL_SPIKE        1
-//`define IMPL_ROCKET       2
-
-//// page table entry (PTE) fields
-//`define PTE_V             64'h0000000000000001 // Entry is a page Table descriptor
-//`define PTE_T             64'h0000000000000002 // Entry is a page Table, not a terminal node
-//`define PTE_G             64'h0000000000000004 // Global
-//`define PTE_UR            64'h0000000000000008 // User Write permission
-//`define PTE_UW            64'h0000000000000010 // User Read permission
-//`define PTE_UX            64'h0000000000000020 // User eXecute permission
-//`define PTE_SR            64'h0000000000000040 // Supervisor Read permission
-//`define PTE_SW            64'h0000000000000080 // Supervisor Write permission
-//`define PTE_SX            64'h0000000000000100 // Supervisor eXecute permission
-//`define PTE_PERM          (`PTE_SR | `PTE_SW | `PTE_SX | `PTE_UR | `PTE_UW | `PTE_UX)
-//
-//`define RISCV_PGLEVELS      3
-//`define RISCV_PGSHIFT       13
-//`define RISCV_PGLEVEL_BITS  10
-//`define RISCV_PGSIZE        (1 << `RISCV_PGSHIFT)
-
-
-
-
-/*Original CSRs*/
 logic [`CSR_WIDTH-1:0]  csr_fcsr;
-logic [`CSR_WIDTH-1:0]  csr_stats;
-logic [`CSR_WIDTH-1:0]  csr_sup0; 
-logic [`CSR_WIDTH-1:0]  csr_sup1; 
-logic [`CSR_WIDTH-1:0]  csr_epc; 
-logic [`CSR_WIDTH-1:0]  csr_badvaddr; 
-logic [`CSR_WIDTH-1:0]  csr_ptbr; 
-logic [`CSR_WIDTH-1:0]  csr_asid; 
-logic [`CSR_WIDTH-1:0]  csr_count;
-logic [`CSR_WIDTH-1:0]  csr_compare;
-logic [`CSR_WIDTH-1:0]  csr_evec; 
-logic [`CSR_WIDTH-1:0]  csr_cause;
-logic [`CSR_WIDTH-1:0]  csr_status; 
-logic [`CSR_WIDTH-1:0]  csr_hartid; 
-logic [`CSR_WIDTH-1:0]  csr_impl; 
-logic [`CSR_WIDTH-1:0]  csr_fatc; 
-logic [`CSR_WIDTH-1:0]  csr_send_ipi; 
-logic [`CSR_WIDTH-1:0]  csr_clear_ipi;
-logic [`CSR_WIDTH-1:0]  csr_reset; 
-logic [`CSR_WIDTH-1:0]  csr_tohost;
-logic [`CSR_WIDTH-1:0]  csr_fromhost; 
-logic [`CSR_WIDTH-1:0]  csr_cycle;
-logic [`CSR_WIDTH-1:0]  csr_time; 
-logic [`CSR_WIDTH-1:0]  csr_instret;
-logic [`CSR_WIDTH-1:0]  csr_cycleh;
-logic [`CSR_WIDTH-1:0]  csr_timeh; 
-logic [`CSR_WIDTH-1:0]  csr_instreth;
-
-logic [`CSR_WIDTH-1:0]  csr_epc_next;
-logic [`CSR_WIDTH-1:0]  csr_badvaddr_next;
-logic [`CSR_WIDTH-1:0]  csr_count_next;
-logic [`CSR_WIDTH-1:0]  csr_cause_next;
-logic [`CSR_WIDTH-1:0]  csr_scause_next;
-logic [`CSR_WIDTH-1:0]  csr_status_next;
-logic [`CSR_WIDTH-1:0]  irq_vector_next;
-logic [`CSR_WIDTH-1:0]  set_irq_vector;
-logic [`CSR_WIDTH-1:0]  clear_irq_vector;
-/* New CSRs */
 logic [`CSR_WIDTH-1:0]  csr_mcycle;
 logic [`CSR_WIDTH-1:0]  csr_minstret;
 status_t                csr_mstatus;
@@ -168,6 +85,7 @@ logic [`CSR_WIDTH-1:0]  csr_minstret_next;
 status_t                csr_mstatus_next;
 logic [`CSR_WIDTH-1:0]  csr_mepc_next;
 logic [`CSR_WIDTH-1:0]  csr_mcause_next;
+logic [`CSR_WIDTH-1:0]  csr_scause_next;
 logic [`CSR_WIDTH-1:0]  csr_mtval_next;
 logic [`CSR_WIDTH-1:0]  csr_stval_next;
 logic [`CSR_WIDTH-1:0]  csr_sepc_next;
@@ -180,33 +98,6 @@ assign priv_lvl_o = priv_lvl;
 logic                        wr_csr_fflags    ;
 logic                        wr_csr_frm       ;
 logic                        wr_csr_fcsr      ;
-logic                        wr_csr_stats     ;
-logic                        wr_csr_sup0      ;
-logic                        wr_csr_sup1      ;
-logic                        wr_csr_epc       ;
-logic                        wr_csr_badvaddr  ;
-logic                        wr_csr_ptbr      ;
-logic                        wr_csr_asid      ;
-logic                        wr_csr_count     ;
-logic                        wr_csr_compare   ;
-logic                        wr_csr_evec      ;
-logic                        wr_csr_cause     ;
-logic                        wr_csr_status    ;
-logic                        wr_csr_hartid    ;
-logic                        wr_csr_impl      ;
-logic                        wr_csr_fatc      ;
-logic                        wr_csr_send_ipi  ;
-logic                        wr_csr_clear_ipi ;
-logic                        wr_csr_reset     ;
-logic                        wr_csr_tohost    ;
-logic                        wr_csr_fromhost  ;
-logic                        wr_csr_cycle     ;
-logic                        wr_csr_time      ;
-logic                        wr_csr_instret   ;
-logic                        wr_csr_cycleh    ;
-logic                        wr_csr_timeh     ;
-logic                        wr_csr_instreth  ;
-
 logic                        wr_csr_mcycle    ;
 logic                        wr_csr_minstret  ;
 logic                        wr_csr_mstatus   ;
@@ -266,7 +157,6 @@ else // SUPERVISOR_PRIVILEGE
   csr_evec_o = {csr_stvec[`CSR_WIDTH-1:2], 2'b0};
 end
 
-assign csr_status_o  = csr_status;	//Changes: Mohit
 assign csr_frm_o  = {{`CSR_WIDTH-3{1'b0}}, csr_fcsr[7:5]};
 
 // Checkpoint the CSR address and Data read
@@ -348,34 +238,6 @@ begin
   wr_csr_fflags    =  1'b0;
   wr_csr_frm       =  1'b0;
   wr_csr_fcsr      =  1'b0;
-  wr_csr_stats     =  1'b0;
-  wr_csr_sup0      =  1'b0;
-  wr_csr_sup1      =  1'b0;
-  wr_csr_epc       =  1'b0;
-  wr_csr_badvaddr  =  1'b0;
-  wr_csr_ptbr      =  1'b0;
-  wr_csr_asid      =  1'b0;
-  wr_csr_count     =  1'b0;
-  wr_csr_compare   =  1'b0;
-  wr_csr_evec      =  1'b0;
-  wr_csr_cause     =  1'b0;
-  wr_csr_status    =  1'b0;
-  wr_csr_hartid    =  1'b0;
-  wr_csr_impl      =  1'b0;
-  wr_csr_fatc      =  1'b0;
-  wr_csr_send_ipi  =  1'b0;
-  wr_csr_clear_ipi =  1'b0;
-  wr_csr_reset     =  1'b0;
-  wr_csr_tohost    =  1'b0;
-  wr_csr_fromhost  =  1'b0;
-  wr_csr_cycle     =  1'b0;
-  wr_csr_time      =  1'b0;
-  wr_csr_instret   =  1'b0;
-  wr_csr_cycleh    =  1'b0;
-  wr_csr_timeh     =  1'b0;
-  wr_csr_instreth  =  1'b0;
-  clear_irq_vector =  64'b0;
-
   wr_csr_mcycle    =  1'b0;
   wr_csr_minstret  =  1'b0;
   wr_csr_mstatus   =  1'b0;
@@ -405,38 +267,8 @@ begin
       `CSR_FFLAGS      :wr_csr_fflags    = 1'b1;
       `CSR_FRM         :wr_csr_frm       = 1'b1;
       `CSR_FCSR        :wr_csr_fcsr      = 1'b1;
-      12'h0c0:wr_csr_stats     = 1'b1; 
-      12'h500:wr_csr_sup0      = 1'b1; 
-      12'h501:wr_csr_sup1      = 1'b1; 
-      12'h502:wr_csr_epc       = 1'b1; 
-      12'h503:wr_csr_badvaddr  = 1'b1; 
-      12'h504:wr_csr_ptbr      = 1'b1; 
-      12'h505:wr_csr_asid      = 1'b1; 
-      12'h506:wr_csr_count     = 1'b1; 
-      12'h507:wr_csr_compare   = 1'b1; 
-      12'h508:wr_csr_evec      = 1'b1;
-      12'h509:wr_csr_cause     = 1'b1; 
-      12'h50a:wr_csr_status    = 1'b1; 
-      12'h50b:wr_csr_hartid    = 1'b1; 
-      12'h50c:wr_csr_impl      = 1'b1; 
-      12'h50d:wr_csr_fatc      = 1'b1; 
-      12'h50e:wr_csr_send_ipi  = 1'b1; 
-      12'h50f:wr_csr_clear_ipi = 1'b1; 
-      12'h51d:wr_csr_reset     = 1'b1; 
-      12'h51e:wr_csr_tohost    = 1'b1; 
-      12'h51f:begin
-        wr_csr_fromhost    = 1'b1; 
-        clear_irq_vector[`IRQ_HOST+`SR_IP_SHIFT]   = 1'b1;
-      end
-      //12'hc00:wr_csr_cycle     = 1'b1;
-      12'hc01:wr_csr_time      = 1'b1; 
-      //12'hc02:wr_csr_instret   = 1'b1;
-      12'hc80:wr_csr_cycleh    = 1'b1; 
-      12'hc81:wr_csr_timeh     = 1'b1; 
-      12'hc82:wr_csr_instreth  = 1'b1; 
-
       `CSR_MCYCLE     : wr_csr_mcycle     = 1'b1;
-      `CSR_MINSTRET   : wr_csr_instret    = 1'b1;
+      `CSR_MINSTRET   : wr_csr_minstret   = 1'b1;
       `CSR_MSTATUS    : wr_csr_mstatus    = 1'b1;
       `CSR_MEDELEG: wr_csr_medeleg = 1'b1;
       `CSR_MIDELEG: wr_csr_mideleg = 1'b1;
@@ -466,33 +298,6 @@ begin
   if(reset)
   begin
     csr_fcsr      <=  `CSR_WIDTH'b0;
-    csr_stats     <=  `CSR_WIDTH'b0;
-    csr_sup0      <=  `CSR_WIDTH'b0;
-    csr_sup1      <=  `CSR_WIDTH'b0;
-    csr_epc       <=  `CSR_WIDTH'b0;
-    csr_badvaddr  <=  `CSR_WIDTH'b0;
-    csr_ptbr      <=  `CSR_WIDTH'b0;
-    csr_asid      <=  `CSR_WIDTH'b0;
-    csr_count     <=  `CSR_WIDTH'b0;
-    csr_compare   <=  `CSR_WIDTH'b0;
-    csr_evec      <=  `CSR_WIDTH'b0;
-    csr_cause     <=  `CSR_WIDTH'b0;
-    csr_status    <=  (`SR_S | `SR_S64 | `SR_U64);
-    csr_hartid    <=  `CSR_WIDTH'b0;
-    csr_impl      <=  `CSR_WIDTH'b0;
-    csr_fatc      <=  `CSR_WIDTH'b0;
-    csr_send_ipi  <=  `CSR_WIDTH'b0;
-    csr_clear_ipi <=  `CSR_WIDTH'b0;
-    csr_reset     <=  `CSR_WIDTH'b0;
-    csr_tohost    <=  `CSR_WIDTH'b0;
-    csr_fromhost  <=  `CSR_WIDTH'b0;
-    csr_cycle     <=  `CSR_WIDTH'b0;
-    csr_time      <=  `CSR_WIDTH'b0;
-    csr_instret   <=  `CSR_WIDTH'b0;
-    csr_cycleh    <=  `CSR_WIDTH'b0;
-    csr_timeh     <=  `CSR_WIDTH'b0;
-    csr_instreth  <=  `CSR_WIDTH'b0;
-
     csr_mcycle     <=  `CSR_WIDTH'b0;
     csr_minstret   <=  `CSR_WIDTH'b0;
     csr_mstatus    <=  (`MSTATUS_SXL_64 | `MSTATUS_UXL_64 ); // only set up the base ISA after reset
@@ -522,33 +327,6 @@ begin
     csr_fcsr      <=  wr_csr_frm       ? {{`CSR_WIDTH-8{1'b1}},regWrDataCommit[2:0], 5'b1} & csr_fcsr : csr_fcsr;
     //Changes: Mohit (FFLAGS is also part of FCSR register according to ISA)
     csr_fcsr      <=  wr_csr_fcsr      ? {{`CSR_WIDTH-8{1'b1}},regWrDataCommit[7:0]} & csr_fcsr : (csr_fcsr | (csr_fflags_i & `CSR_FFLAGS_MASK));
-    csr_stats     <=  wr_csr_stats     ? regWrDataCommit : csr_stats; 
-    csr_sup0      <=  wr_csr_sup0      ? regWrDataCommit : csr_sup0; 
-    csr_sup1      <=  wr_csr_sup1      ? regWrDataCommit : csr_sup1; 
-    csr_epc       <=  wr_csr_epc       ? regWrDataCommit : csr_epc_next; 
-    csr_badvaddr  <=  wr_csr_badvaddr  ? regWrDataCommit : csr_badvaddr_next;
-    csr_ptbr      <=  wr_csr_ptbr      ? regWrDataCommit : csr_ptbr; 
-    csr_asid      <=  wr_csr_asid      ? regWrDataCommit : csr_asid;
-    csr_count     <=  wr_csr_count     ? regWrDataCommit : csr_count_next;
-    csr_compare   <=  wr_csr_compare   ? regWrDataCommit & `CSR_COMPARE_MASK : csr_compare; 
-    csr_evec      <=  wr_csr_evec      ? regWrDataCommit : csr_evec; 
-    csr_cause     <=  wr_csr_cause     ? regWrDataCommit : csr_cause_next;  
-    csr_status    <=  wr_csr_status    ? ((regWrDataCommit & ~`SR_IP) | (csr_status & `SR_IP)) & `CSR_STATUS_MASK : csr_status_next;
-    csr_hartid    <=  wr_csr_hartid    ? regWrDataCommit : csr_hartid;   
-    csr_impl      <=  wr_csr_impl      ? regWrDataCommit : csr_impl;   
-    csr_fatc      <=  wr_csr_fatc      ? regWrDataCommit : csr_fatc;   
-    csr_send_ipi  <=  wr_csr_send_ipi  ? regWrDataCommit : csr_send_ipi;   
-    csr_clear_ipi <=  wr_csr_clear_ipi ? regWrDataCommit : csr_clear_ipi;
-    csr_reset     <=  wr_csr_reset     ? regWrDataCommit : csr_reset;
-    csr_tohost    <=  wr_csr_tohost    ? regWrDataCommit : csr_tohost;
-    csr_fromhost  <=  wr_csr_fromhost  ? regWrDataCommit : csr_fromhost;
-    csr_cycle     <=  wr_csr_cycle     ? regWrDataCommit : csr_count_next; //csr_cycle;
-    csr_time      <=  wr_csr_time      ? regWrDataCommit : csr_count_next; //csr_time;
-    csr_instret   <=  wr_csr_instret   ? regWrDataCommit : csr_count_next; //csr_instret;
-    csr_cycleh    <=  wr_csr_cycleh    ? regWrDataCommit : csr_cycleh;
-    csr_timeh     <=  wr_csr_timeh     ? regWrDataCommit : csr_timeh;
-    csr_instreth  <=  wr_csr_instreth  ? regWrDataCommit : csr_instreth;
-
     csr_mcycle    <=  wr_csr_mcycle    ? regWrDataCommit : csr_mcycle_next;
     csr_minstret  <=  wr_csr_minstret  ? regWrDataCommit : csr_minstret_next;
     csr_mstatus   <= wr_csr_mstatus ? regWrDataCommit : csr_mstatus_next;
@@ -598,7 +376,6 @@ begin
   end
 end
 
-assign set_irq_vector  = 0;
 
 // Interrupt bits in MIP
 always_comb begin
@@ -607,10 +384,6 @@ always_comb begin
   csr_mip[`IRQ_M_TIMER] = time_irq_i;  // external timer irq
 end
 
-
-assign csr_count_next     = csr_count + totalCommit_i + exceptionFlag_i;
-assign csr_epc_next       = exceptionFlag_i ? exceptionPC_i    : csr_epc;
-assign csr_cause_next     = exceptionFlag_i ? exceptionCause_i : csr_cause;
 
 // totalCommit_i is the number of instructions commiting each cycle
 always_comb begin
@@ -712,38 +485,6 @@ always_comb begin
       csr_epc_o = csr_mepc;
 end
 
-always_comb
-begin
-  if(sretFlag_i)
-  begin
-    csr_status_next    = (csr_status & ~(`SR_S | `SR_EI)) | 
-                         ((csr_status & `SR_PS) ? `SR_S : 64'b0) |
-                         ((csr_status & `SR_PEI) ? `SR_EI : 64'b0);
-  end
-  else
-  begin
-    irq_vector_next    = set_irq_vector | (~clear_irq_vector & csr_status & `SR_IP);
-    csr_status_next    = (csr_status & ~`SR_IP) | irq_vector_next;
-  end
-end
-
-always_comb
-begin
-  csr_badvaddr_next = csr_badvaddr;
-  if(exceptionFlag_i)
-  begin
-    case(exceptionCause_i)
-      `CAUSE_MISALIGNED_FETCH: csr_badvaddr_next = exceptionPC_i;
-      `CAUSE_FAULT_FETCH     : csr_badvaddr_next = exceptionPC_i;
-      `CAUSE_MISALIGNED_LOAD : csr_badvaddr_next = ldCommitAddr_i;
-      `CAUSE_MISALIGNED_STORE: csr_badvaddr_next = stCommitAddr_i;
-      `CAUSE_FAULT_LOAD      : csr_badvaddr_next = ldCommitAddr_i;
-      `CAUSE_FAULT_STORE     : csr_badvaddr_next = stCommitAddr_i;
-      default                : csr_badvaddr_next = csr_badvaddr; 
-    endcase
-  end
-end
-
 // Register Read operation
 always_comb
 begin
@@ -751,32 +492,6 @@ begin
     `CSR_FFLAGS     : regRdData_o = {{`CSR_WIDTH-5{1'b0}}, csr_fcsr[4:0]};
     `CSR_FRM        : regRdData_o = {{`CSR_WIDTH-3{1'b0}}, csr_fcsr[7:5]};
     `CSR_FCSR       : regRdData_o = {{`CSR_WIDTH-8{1'b0}}, csr_fcsr[7:0]};
-    12'h0c0:regRdData_o   =  csr_stats     ; 
-    12'h500:regRdData_o   =  csr_sup0      ; 
-    12'h501:regRdData_o   =  csr_sup1      ; 
-    12'h502:regRdData_o   =  csr_epc       ; 
-    12'h503:regRdData_o   =  csr_badvaddr  ; 
-    12'h504:regRdData_o   =  csr_ptbr      ; 
-    12'h505:regRdData_o   =  csr_asid      ; 
-    12'h506:regRdData_o   =  csr_count     ; 
-    12'h507:regRdData_o   =  csr_compare   ; 
-    12'h508:regRdData_o   =  csr_evec      ;
-    12'h509:regRdData_o   =  csr_cause     ;  
-    12'h50a:regRdData_o   =  csr_status    ;   
-    12'h50b:regRdData_o   =  csr_hartid    ;   
-    12'h50c:regRdData_o   =  csr_impl      ;   
-    12'h50d:regRdData_o   =  csr_fatc      ;   
-    12'h50e:regRdData_o   =  csr_send_ipi  ;   
-    12'h50f:regRdData_o   =  csr_clear_ipi ;
-    12'h51d:regRdData_o   =  csr_reset     ;
-    12'h51e:regRdData_o   =  csr_tohost    ;
-    12'h51f:regRdData_o   =  csr_fromhost  ;
-    //12'hc00:regRdData_o   =  csr_cycle     ;
-    12'hc01:regRdData_o   =  csr_time      ;
-    //12'hc02:regRdData_o   =  csr_instret   ;
-    12'hc80:regRdData_o   =  csr_cycleh    ;
-    12'hc81:regRdData_o   =  csr_timeh     ;
-    12'hc82:regRdData_o   =  csr_instreth  ;
     `CSR_CYCLE      : regRdData_o = csr_mcycle;
     `CSR_INSTRET    : regRdData_o = csr_minstret;
     `CSR_MCYCLE     : regRdData_o = csr_mcycle;
@@ -831,32 +546,6 @@ begin
     `CSR_FFLAGS     :atomicRdVioFlag = (regRdDataChkpt   != {{`CSR_WIDTH-5{1'b0}}, csr_fcsr[4:0]});
     `CSR_FRM        :atomicRdVioFlag = (regRdDataChkpt   != {{`CSR_WIDTH-3{1'b0}}, csr_fcsr[7:5]});
     `CSR_FCSR       :atomicRdVioFlag = (regRdDataChkpt   != {{`CSR_WIDTH-8{1'b0}}, csr_fcsr[7:0]});
-    12'h0c0:atomicRdVioFlag = (regRdDataChkpt   !=  csr_stats     ); 
-    12'h500:atomicRdVioFlag = (regRdDataChkpt   !=  csr_sup0      ); 
-    12'h501:atomicRdVioFlag = (regRdDataChkpt   !=  csr_sup1      ); 
-    12'h502:atomicRdVioFlag = (regRdDataChkpt   !=  csr_epc       ); 
-    12'h503:atomicRdVioFlag = (regRdDataChkpt   !=  csr_badvaddr  ); 
-    12'h504:atomicRdVioFlag = (regRdDataChkpt   !=  csr_ptbr      ); 
-    12'h505:atomicRdVioFlag = (regRdDataChkpt   !=  csr_asid      ); 
-    12'h506:atomicRdVioFlag = (regRdDataChkpt   !=  csr_count     ); 
-    12'h507:atomicRdVioFlag = (regRdDataChkpt   !=  csr_compare   ); 
-    12'h508:atomicRdVioFlag = (regRdDataChkpt   !=  csr_evec      );
-    12'h509:atomicRdVioFlag = (regRdDataChkpt   !=  csr_cause     );  
-    12'h50a:atomicRdVioFlag = (regRdDataChkpt   !=  csr_status    );   
-    12'h50b:atomicRdVioFlag = (regRdDataChkpt   !=  csr_hartid    );   
-    12'h50c:atomicRdVioFlag = (regRdDataChkpt   !=  csr_impl      );   
-    12'h50d:atomicRdVioFlag = (regRdDataChkpt   !=  csr_fatc      );   
-    12'h50e:atomicRdVioFlag = (regRdDataChkpt   !=  csr_send_ipi  );   
-    12'h50f:atomicRdVioFlag = (regRdDataChkpt   !=  csr_clear_ipi );
-    12'h51d:atomicRdVioFlag = (regRdDataChkpt   !=  csr_reset     );
-    12'h51e:atomicRdVioFlag = (regRdDataChkpt   !=  csr_tohost    );
-    12'h51f:atomicRdVioFlag = (regRdDataChkpt   !=  csr_fromhost  );
-    //12'hc00:atomicRdVioFlag = (regRdDataChkpt   !=  csr_cycle     );
-    12'hc01:atomicRdVioFlag = (regRdDataChkpt   !=  csr_time      );
-    //12'hc02:atomicRdVioFlag = (regRdDataChkpt   !=  csr_instret   );
-    12'hc80:atomicRdVioFlag = (regRdDataChkpt   !=  csr_cycleh    );
-    12'hc81:atomicRdVioFlag = (regRdDataChkpt   !=  csr_timeh     );
-    12'hc82:atomicRdVioFlag = (regRdDataChkpt   !=  csr_instreth  );
     `CSR_CYCLE     : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mcycle    );
     `CSR_INSTRET   : atomicRdVioFlag = (regRdDataChkpt  !=  csr_minstret  );
     `CSR_MCYCLE    : atomicRdVioFlag = (regRdDataChkpt  !=  csr_mcycle    );

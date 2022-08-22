@@ -248,13 +248,6 @@ begin:ALU_OPERATION
                    flags.destValid         = destValid_i;
                end
 
-               `CSR_CYCLEH,`CSR_TIMEH,`CSR_INSTRETH:
-               begin
-                   result                  = data2_i[`SIZE_DATA-1:32]; 
-                   flags.executed          = 1'h1;
-                   flags.destValid         = destValid_i;
-               end
-
                 `CSR_FCSR:
                begin
                    result                  = data2_i; 
