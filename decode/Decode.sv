@@ -32,7 +32,7 @@ module Decode(
 
 	input  decPkt                     decPacket_i [0:`FETCH_WIDTH-1],
 
-	input privilege_t                 priv_lvl_i,
+	input riscv_structs::privilege_t  priv_lvl_i,
 
   // Number of ibPacket is twice the number of decPacket because potentially,
   // each instruction can be a complex instruction and can be split into two

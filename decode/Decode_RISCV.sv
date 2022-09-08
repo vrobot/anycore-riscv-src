@@ -26,7 +26,7 @@ module Decode_RISCV (
 `endif
 
     input  decPkt                     decPacket_i,
-    input privilege_t                 priv_lvl_i,
+    input riscv_structs::privilege_t  priv_lvl_i,
 
     output renPkt                     ibPacket0_o,
     output renPkt                     ibPacket1_o

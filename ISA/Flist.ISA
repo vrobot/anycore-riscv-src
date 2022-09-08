@@ -1,1 +1,2 @@
-RISCV_ISA.sv
+RISCV_ISA.h
+riscv_structs.sv

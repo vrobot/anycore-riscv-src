@@ -364,7 +364,7 @@ reg  [`CSR_WIDTH-1:0]        	  csr_frm;		//Changes: Mohit (Used in FP-unit for 
 reg  [`CSR_WIDTH-1:0]        	  csr_fflags;		//Changes: Mohit (Updated at retire in SupRegFile based on fp_exception)
 reg                               sretFlag;
 reg                               mretFlag;
-privilege_t                       priv_lvl;
+riscv_structs::privilege_t        priv_lvl;
 
 bypassPkt                         bypassPacket [0:`ISSUE_WIDTH-1];
 bypassPkt                         bypassPacket_a1 [0:`ISSUE_WIDTH-1];

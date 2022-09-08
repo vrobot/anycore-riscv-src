@@ -18,7 +18,7 @@
 
 `timescale 1ns/100ps
 
-
+import riscv_structs::*;
 module SupRegFile (
 
 	input                               clk,
