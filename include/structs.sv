@@ -120,6 +120,7 @@ typedef struct packed {
 	logic                                 isCSR;
 	logic                                 isScall;
 	logic                                 isSbreak;
+	logic                                 isFenceI;
 	logic                                 isSret;
 	logic                                 isMret;
 	logic                                 skipIQ;
@@ -163,6 +164,7 @@ typedef struct packed {
 	logic                                 isCSR;
 	logic                                 isScall;
 	logic                                 isSbreak;
+	logic                                 isFenceI;
 	logic                                 isSret;
 	logic                                 isMret;
 	logic                                 skipIQ;
@@ -236,6 +238,7 @@ typedef struct packed {
 	logic                                 isCSR;
 	logic                                 isScall;
 	logic                                 isSbreak;
+	logic                                 isFenceI;
 	logic                                 isSret;
 	logic                                 isMret;
 	logic                                 isFP;	//Changes: Mohit(Added isFP flag to alpacket)

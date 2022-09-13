@@ -74,7 +74,8 @@ module Execute_Ctrl (
 	output wbPkt                         wbPacket_o,
 
 	/* all the bypasses coming from the different pipes */
-	input  bypassPkt                     bypassPacket_i [0:`ISSUE_WIDTH-1]
+	input  bypassPkt                     bypassPacket_i [0:`ISSUE_WIDTH-1],
+	output                               icFlush_o
 	);
 
 
@@ -136,7 +137,8 @@ Ctrl_ALU ctrlAlu(
   .csrWrEn_o                          (csrWrEn),
 	.nextPC_o                           (nextPC),
 	.direction_o                        (computedDir),
-	.flags_o                            (flags)
+	.flags_o                            (flags),
+	.icFlush_o                          (icFlush_o)
 	);
 
 

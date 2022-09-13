@@ -44,7 +44,9 @@ module Ctrl_ALU (
     output                         csrWrEn_o,
     output [`SIZE_PC-1:0]          nextPC_o,
     output                         direction_o,
-    output exeFlgs                 flags_o
+    output exeFlgs                 flags_o,
+    // unused, icFlush is from the ActiveList
+    output                         icFlush_o // FENCE.I needs to flush the L1 instruction cache
     );
 
 
@@ -104,6 +106,7 @@ begin:ALU_OPERATION
     csrWrData = 0; 
     csrWrAddr = 0; 
     csrWrEn   = 1'h0; 
+    icFlush_o = 1'b0;
 
     case(opcode)
 
@@ -345,7 +348,11 @@ begin:ALU_OPERATION
 
         `OP_MISC_MEM:
         begin 
+          //result                  = pc_p4;
+          nextPC                  = pc_p4;
           flags.executed          = 1'h1;
+          icFlush_o               = 1'b1;
+          flags.destValid         = destValid_i;
         end
         // NOTE: Need this default to make the case statement
         // full case and stopping synthesis from screwing up

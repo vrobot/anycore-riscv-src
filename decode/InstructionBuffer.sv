@@ -132,6 +132,7 @@ begin
     renPacket_o[i].isCSR        = instBufferReady_o & instValidMask[i] & renPacket_t[i].isCSR        ; 
     renPacket_o[i].isScall      = instBufferReady_o & instValidMask[i] & renPacket_t[i].isScall      ; 
     renPacket_o[i].isSbreak     = instBufferReady_o & instValidMask[i] & renPacket_t[i].isSbreak     ; 
+    renPacket_o[i].isFenceI     = instBufferReady_o & instValidMask[i] & renPacket_t[i].isFenceI     ;
     renPacket_o[i].isSret       = instBufferReady_o & instValidMask[i] & renPacket_t[i].isSret       ; 
     renPacket_o[i].isMret       = instBufferReady_o & instValidMask[i] & renPacket_t[i].isMret       ;
     renPacket_o[i].skipIQ       = instBufferReady_o & instValidMask[i] & renPacket_t[i].skipIQ       ; 

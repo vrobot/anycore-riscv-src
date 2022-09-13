@@ -61,6 +61,9 @@ module L1ICache (
   input                                 icScratchWrEn_i,
   input  [7:0]                          icScratchWrData_i,
   output [7:0]                          icScratchRdData_o,
+
+  input                                 icFlush_i,
+  output                                icFlushDone_o,
 `endif  
 
   output                                icMiss_o,
@@ -303,6 +306,8 @@ module L1ICache (
       .inst_o                 (inst),
       .instValid_o            (instValid),
       
+      .icFlush_i              (icFlush_i),
+      .icFlushDone_o          (icFlushDone_o),
       .ic2memReqAddr_o        (ic2memReqAddr_o),
       .ic2memReqValid_o       (ic2memReqValid_o),
       

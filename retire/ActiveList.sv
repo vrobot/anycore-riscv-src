@@ -134,7 +134,8 @@ module ActiveList (
 
 	output                                 loadViolation_o,
   output                                 alRamReady_o,
-  output     [`CSR_WIDTH-1:0]            csr_fflags_o
+    output     [`CSR_WIDTH-1:0]            csr_fflags_o,
+    output                                 icFlush_o
 	);
 
 
@@ -160,6 +161,9 @@ reg                                 fissionViolation;
 reg                                 sretFlag [0:`COMMIT_WIDTH-1];
 reg                                 mretFlag [0:`COMMIT_WIDTH-1];
 reg                                 csrViolateFlag [0:`COMMIT_WIDTH-1];
+
+reg                                 fenceFlag [0:`COMMIT_WIDTH-1];
+reg                                 fenceFlag_reg;
 
 reg  [`SIZE_PC-1:0]                 recoverPC;
 
@@ -228,6 +232,7 @@ end
   wire alVioReady;
 `endif
 
+assign icFlush_o = fenceFlag_reg;
 
 /************************************************************************************
    Following instantiates RAM modules for Active List. 2 seperate RAM modules have
@@ -604,7 +609,7 @@ ALREADY_RAM #(
 `endif
 
 	.clk        (clk),
-	.reset      (reset | violateFlag_reg | mispredFlag_reg | exceptionFlag_reg)
+	.reset      (reset | violateFlag_reg | mispredFlag_reg | exceptionFlag_reg | fenceFlag_reg)
 
 	);
 
@@ -733,7 +738,7 @@ ALVIO_RAM #(
 `endif
 
 	.clk        (clk),
-	.reset      (reset | violateFlag_reg | mispredFlag_reg | exceptionFlag_reg)
+	.reset      (reset | violateFlag_reg | mispredFlag_reg | exceptionFlag_reg | fenceFlag_reg)
 	);
 
 
@@ -782,7 +787,7 @@ ALEXCPT_RAM #(
 `endif
 
 	.clk        (clk),
-	.reset      (reset | violateFlag_reg | mispredFlag_reg | exceptionFlag_reg)
+	.reset      (reset | violateFlag_reg | mispredFlag_reg | exceptionFlag_reg | fenceFlag_reg)
 	);
 
 
@@ -883,7 +888,8 @@ end
 * In case of control mis-prediction, nextPC is the target address.
 *******************************************************************************/
 /* TODO: Disjoin violateFlag_reg and mispredFlag_reg */
-assign recoverFlag_o    = violateFlag_reg | mispredFlag_reg | exceptionFlag_reg;
+assign recoverFlag_o    = violateFlag_reg | mispredFlag_reg | exceptionFlag_reg
+	| fenceFlag_reg;
 assign recoverPC_o      = (mispredFlag_reg) ? targetPC : recoverPC;
 
 assign loadViolation_o  = loadViolation;
@@ -1024,6 +1030,8 @@ begin
 	 * the head of the AL. */
 		mispredFlag[i]    = ctrlAl[i][0] && commitReady[i];
 
+    fenceFlag[i] = dataAl[i].isFenceI & commitReady[i];
+
 	/* The exception flag is used to mark the system call. 
 	 * An instruction with the exception bit set waits until it reaches 
 	 * the head of the AL before committing. After it has committed, 
@@ -1118,6 +1126,7 @@ begin:COMMIT
 	begin
 		commitVector_f[i] = ( alCount > i) & commitReady[i] & 
                           ~mispredFlag[i] & ~mispredFlag[0] &
+                           ~fenceFlag[i]   & ~fenceFlag[0] &
                           ~sretFlag[i]    & ~sretFlag[0] &
                           ~mretFlag[i]    & ~mretFlag[0] &
 		                      ~violateFlag[i] & ~csrViolateFlag[i] & 
@@ -1311,7 +1320,7 @@ begin
 	end
   else
   begin
-    if(violateFlag_reg | mispredFlag_reg | exceptionFlag_reg)
+    if(violateFlag_reg | mispredFlag_reg | exceptionFlag_reg | fenceFlag_reg)
     begin
 		  headPtr  <= 0;
 		  tailPtr  <= {`SIZE_ACTIVELIST_LOG{1'b0}};
@@ -1324,9 +1333,10 @@ begin
 
     /* Maintain the active list occupancy count each cycle */
     // TODO: Why is the count reset one cycle in advance
-	  if ((violateFlag[0] | csrViolateFlag[0] | mispredFlag[0] | sretFlag[0] | mretFlag[0] |exceptionFlag[0] | interruptPulse) & ~stallStCommit_i) // Delay recovery until ready to commit again
+	  if ((violateFlag[0] | csrViolateFlag[0] | mispredFlag[0] | sretFlag[0] | mretFlag[0]
+		  | exceptionFlag[0] | fenceFlag[0] | interruptPulse) & ~stallStCommit_i) // Delay recovery until ready to commit again
 	  	alCount <= 0;
-	  else if (violateFlag_reg | mispredFlag_reg | exceptionFlag_reg)
+	  else if (violateFlag_reg | mispredFlag_reg | exceptionFlag_reg | fenceFlag_reg)
 	  	alCount <= 0;
 	  else	
       alCount <= alCount_next;
@@ -1352,6 +1362,7 @@ begin
 		violateFlag_reg       <= 1'b0;
 		mispredFlag_reg       <= 1'b0;
 		exceptionFlag_reg     <= 1'b0;
+		fenceFlag_reg         <= 1'b0;
 		loadViolation         <= 1'b0;
 
 		targetPC              <= `SIZE_PC'h0;
@@ -1362,11 +1373,12 @@ begin
 
 	else
 	begin
-	  if (violateFlag_reg | mispredFlag_reg | exceptionFlag_reg)
+	  if (violateFlag_reg | mispredFlag_reg | exceptionFlag_reg | fenceFlag_reg)
     begin
 		  violateFlag_reg       <= 1'b0;
 		  mispredFlag_reg       <= 1'b0;
 		  exceptionFlag_reg     <= 1'b0;
+		  fenceFlag_reg         <= 1'b0;
 		  loadViolation         <= 1'b0;
 		  atomicityViolation    <= 1'b0;
 
@@ -1381,6 +1393,14 @@ begin
 		  begin
 		  	mispredFlag_reg     <= 1'b1;
 		  	targetPC            <= targetAddr;
+		  end
+
+		  if (fenceFlag[0] & ~stallStCommit_i)
+		  begin
+		  	fenceFlag_reg       <= 1'b1;
+		  	//recoverPC           <= dataAl[0].pc + 4;
+			// targetAddr is pc_p4 from Ctrl ALU
+		  	recoverPC           <= targetAddr;
 		  end
 
 		  if (violateFlag[0] & ~stallStCommit_i)

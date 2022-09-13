@@ -67,6 +67,7 @@ reg                                     instStore_0;
 reg                                     instCSR_0;
 reg                                     instScall_0;
 reg                                     instSbreak_0;
+reg                                     instFenceI_0;
 reg                                     instSret_0;
 reg                                     instMret_0;
 reg                                     instSkipIQ_0;
@@ -94,6 +95,7 @@ begin
     ibPacket0_o.isCSR          = instCSR_0;
     ibPacket0_o.isScall        = instScall_0;
     ibPacket0_o.isSbreak       = instSbreak_0;
+    ibPacket0_o.isFenceI       = instFenceI_0;
     ibPacket0_o.isSret         = instSret_0;
     ibPacket0_o.isMret         = instMret_0;
     ibPacket0_o.skipIQ         = instSkipIQ_0;
@@ -154,6 +156,7 @@ begin
   instSkipIQ_0     = 0;
   instScall_0      = 0;
   instSbreak_0     = 0;
+  instFenceI_0     = 0;
   instSret_0       = 0;
   instMret_0       = 0;
   instExceptionCause_0    = 0;
@@ -411,6 +414,7 @@ begin
 
  // FENCE instructions
  `OP_MISC_MEM: begin
+           instFenceI_0     = 1'b1;
            instCSR_0        = 1'b1;
            instFU_0         = `CONTROL_TYPE;
           end

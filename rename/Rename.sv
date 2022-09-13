@@ -122,6 +122,7 @@ begin
 		disPacket_o[i].isCSR            = renPacket_i[i].isCSR;
 		disPacket_o[i].isScall          = renPacket_i[i].isScall;
 		disPacket_o[i].isSbreak         = renPacket_i[i].isSbreak;
+		disPacket_o[i].isFenceI         = renPacket_i[i].isFenceI;
 		disPacket_o[i].isSret           = renPacket_i[i].isSret;   
 		disPacket_o[i].isMret           = renPacket_i[i].isMret;
 		disPacket_o[i].skipIQ           = renPacket_i[i].skipIQ;   

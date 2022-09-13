@@ -69,8 +69,6 @@ module Core_OOO(
   input                               icScratchWrEn_i,
   input [7:0]                         icScratchWrData_i,
   output [7:0]                        icScratchRdData_o,
-  input                               icFlush_i,
-  output                              icFlushDone_o,
 `endif  
 
 `ifdef DATA_CACHE
@@ -285,6 +283,7 @@ payloadPkt                        rrPacket_l1   [0:`ISSUE_WIDTH-1];
 // wires from execute module
 memPkt                            memPacket;
 logic  [`ISSUE_WIDTH-1:0]         toggleFlag;
+logic                             icFlush;
 
 //Changes: Mohit (Floating-point exception_flags sent between fp-unit and Activelist)
 fpexcptPkt                        fpExcptPacket;
@@ -518,6 +517,9 @@ FetchStage1 fs1(
   .icScratchWrEn_i      (icScratchWrEn_i  ),
   .icScratchWrData_i    (icScratchWrData_i),
   .icScratchRdData_o    (icScratchRdData_o),
+
+  .icFlush_i            (icFlush          ),
+  .icFlushDone_o        (                 ),
 `endif  
 
 `ifdef PERF_MON
@@ -1255,8 +1257,9 @@ ExecutionPipe_Ctrl
 	.csrRdData_i          (csrRdData),
   .csrWrData_o          (csrWrData),
   .csrWrAddr_o          (csrWrAddr),
-  .csrWrEn_o            (csrWrEn)
+    .csrWrEn_o            (csrWrEn),
 
+    .icFlush_o            ()
 );
 
 
@@ -1761,7 +1764,8 @@ ActiveList activeList(
 
 	.loadViolation_o      (loadViolation),
   	.alRamReady_o         (alRamReady),
-        .csr_fflags_o         (csr_fflags)	//Changes: Mohit (Update CSR_FFLAGS at retire)
+    .csr_fflags_o         (csr_fflags),	//Changes: Mohit (Update CSR_FFLAGS at retire)
+    .icFlush_o            (icFlush)
 	);
 
 

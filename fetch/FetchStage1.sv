@@ -52,7 +52,10 @@ module FetchStage1(
     input                                                     icScratchWrEn_i,
     input [7:0]                                               icScratchWrData_i,
     output [7:0]                                              icScratchRdData_o,
+
 `endif  
+    input                           icFlush_i,
+    output                          icFlushDone_o,
 
     output                           icMiss_o,
 
@@ -124,7 +127,8 @@ module FetchStage1(
     output                           rasRamReady_o
     );
 
-
+wire                        icFlushDone;
+assign icFlushDone_o = icFlushDone;
 /* Defining Program Counter register. */
 reg  [`SIZE_PC-1:0]         PC;
 reg  [`SIZE_PC-1:0]         nextPC;
@@ -342,6 +346,9 @@ L1ICache l1icache(
     .icScratchWrData_i    (icScratchWrData_i),
     .icScratchRdData_o    (icScratchRdData_o),
     
+    .icFlush_i            (icFlush_i        ),
+    .icFlushDone_o        (icFlushDone      ),
+
 `endif
 
     .icMiss_o             (icMiss_o),

@@ -48,6 +48,9 @@ module ICache_controller#(
     input                                                     icScratchWrEn_i,
     input [7:0]                                               icScratchWrData_i,
     output [7:0]                                              icScratchRdData_o,
+
+    input                               icFlush_i,
+    output                              icFlushDone_o,
   `endif
 
     input                               mmuException_i,
@@ -422,7 +425,7 @@ module ICache_controller#(
 
   always_ff @(posedge clk or posedge reset)
   begin
-    if(reset)
+    if(reset | icFlush_i)
     begin
       int i;
       for(i = 0; i < `ICACHE_NUM_LINES;i++)
@@ -438,5 +441,9 @@ module ICache_controller#(
     end
   end
 
+  always_ff @(posedge clk)
+  begin
+    icFlushDone_o <= icFlush_i;
+  end
 `endif //`ifdef INST_CACHE
 endmodule

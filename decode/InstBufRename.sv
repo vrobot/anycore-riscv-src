@@ -83,6 +83,7 @@ module InstBufRename(
           renPacket_o[i].isCSR         = 1'b0;
           renPacket_o[i].isScall       = 1'b0;
           renPacket_o[i].isSbreak      = 1'b0;
+          renPacket_o[i].isFenceI      = 1'b0;
           renPacket_o[i].isSret        = 1'b0;
           renPacket_o[i].isMret        = 1'b0;
           renPacket_o[i].SkipIQ        = 1'b0;
