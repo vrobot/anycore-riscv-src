@@ -348,11 +348,16 @@ begin:ALU_OPERATION
 
         `OP_MISC_MEM:
         begin 
-          //result                  = pc_p4;
+           case (fn3)
+               `FN3_FENCEI:
+               begin
           nextPC                  = pc_p4;
-          flags.executed          = 1'h1;
           icFlush_o               = 1'b1;
           flags.destValid         = destValid_i;
+        end
+               default:;
+           endcase
+          flags.executed          = 1'h1;
         end
         // NOTE: Need this default to make the case statement
         // full case and stopping synthesis from screwing up

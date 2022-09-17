@@ -178,6 +178,8 @@
 `define FN3_FMIN            3'h0
 `define FN3_FMAX            3'h1
 
+`define FN3_FENCEI          3'h1
+
 /* Minor OPCODE specified by funct7 */
 `define FN7_MUL_DIV         7'h01
 `define FN7_SRL             7'h00

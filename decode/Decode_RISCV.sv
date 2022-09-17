@@ -414,7 +414,13 @@ begin
 
  // FENCE instructions
  `OP_MISC_MEM: begin
+           case (instFunct3)
+               `FN3_FENCEI:
+               begin
            instFenceI_0     = 1'b1;
+               end
+               default:;
+           endcase
            instCSR_0        = 1'b1;
            instFU_0         = `CONTROL_TYPE;
           end
