@@ -15,6 +15,7 @@
 # 
 # AnyCore is distributed under the BSD license.
 *******************************************************************************/
+`include "define.tmp.h"
 
 `timescale 1ns/100ps
 
@@ -455,7 +456,7 @@ module DCache_controller(
   			stByteEn   = 8'h1 << stAddr_i[2:0];
 
   			piton_stData = {8{stData_i[7:0]}};
-            piton_stSize = {1'b0, `LDST_BYTE};
+            piton_stSize = `MSG_DATA_SIZE_1B;
   		end
   
   		`LDST_HALF_WORD:
@@ -464,7 +465,7 @@ module DCache_controller(
   			stByteEn   = 8'h3 << {stAddr_i[2:1], 1'h0};
 
   			piton_stData = {4{stData_i[15:0]}};
-            piton_stSize = {1'b0, `LDST_HALF_WORD};
+            piton_stSize = `MSG_DATA_SIZE_2B;
   		end
   
   		`LDST_WORD:
@@ -473,7 +474,7 @@ module DCache_controller(
   			stByteEn   = stAddr_i[2] ? 8'hF0 : 8'h0F;
 
   			piton_stData = {2{stData_i[31:0]}};
-            piton_stSize = {1'b0, `LDST_WORD};
+            piton_stSize = `MSG_DATA_SIZE_4B;
   		end
   		
   		`LDST_DOUBLE_WORD:
@@ -482,7 +483,7 @@ module DCache_controller(
 		  	stByteEn   = 8'hFF;
 
   			piton_stData = stData_i;
-            piton_stSize = {1'b0, `LDST_DOUBLE_WORD};
+            piton_stSize = `MSG_DATA_SIZE_8B;
 		  end
   	endcase
   end

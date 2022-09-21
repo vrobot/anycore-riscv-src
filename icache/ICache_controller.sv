@@ -50,7 +50,7 @@ module ICache_controller#(
     output [7:0]                                              icScratchRdData_o,
 
     input                               icFlush_i,
-    output                              icFlushDone_o,
+    output reg                          icFlushDone_o,
   `endif
 
     input                               mmuException_i,

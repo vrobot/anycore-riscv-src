@@ -19,6 +19,7 @@
 `timescale 1ns/100ps
 
 
+import riscv_structs::*;
 module Decode_RISCV (
 
 `ifdef DYNAMIC_CONFIG
