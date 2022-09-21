@@ -218,7 +218,7 @@ always @(posedge clk) begin
 end
 
 always @(posedge clk) begin
-    if (prevCommitPC != currentCommitPC) begin
+    if (totalCommit != 0) begin
         $display("currentCommitPC changed from 0x%x to 0x%x", prevCommitPC, currentCommitPC);
     end
 end

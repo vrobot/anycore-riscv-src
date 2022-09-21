@@ -46,7 +46,7 @@ module Ctrl_ALU (
     output                         direction_o,
     output exeFlgs                 flags_o,
     // unused, icFlush is from the ActiveList
-    output                         icFlush_o // FENCE.I needs to flush the L1 instruction cache
+    output reg                     icFlush_o // FENCE.I needs to flush the L1 instruction cache
     );
 
 

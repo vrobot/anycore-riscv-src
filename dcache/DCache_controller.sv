@@ -149,6 +149,7 @@ module DCache_controller(
   logic [`DCACHE_OFFSET_BITS-1:0]    st_offset_reg;
   logic [`DCACHE_INDEX_BITS-1:0]     st_index_reg;
   logic [`DCACHE_TAG_BITS-1:0]       st_tag_reg;
+  logic [`DCACHE_ST_ADDR_BITS-1:0]   st_addr_reg;
   logic                              stEn_reg;
   logic                              stEn_reg_d1;
   logic [`SIZE_DATA_BYTE-1:0]        stByteEn;
@@ -493,6 +494,7 @@ module DCache_controller(
     st_tag_reg              <= st_tag;
     st_index_reg            <= st_index;
     st_offset_reg           <= st_offset;
+    st_addr_reg             <= stAddr_i;
     stData_reg              <= stData;
     stEn_reg                <= stEn_i;
     stEn_reg_d1             <= stEn_i;
@@ -513,7 +515,7 @@ module DCache_controller(
 
   assign  stMiss_o = ~stHit & mem2dcStComplete_d1;
   
-  assign dc2memStAddr_o        = {st_tag_reg, st_index_reg, st_offset_reg};
+  assign dc2memStAddr_o        = st_addr_reg;
   assign dc2memStData_o        = piton_stData_reg;
   assign dc2memStSize_o        = piton_stSize_reg;
   assign dc2memStValid_o       = stEn_reg & (~dcScratchModeEn_d1);
