@@ -178,6 +178,8 @@
 `define FN3_FMIN            3'h0
 `define FN3_FMAX            3'h1
 
+`define FN3_FENCEI          3'h1
+
 /* Minor OPCODE specified by funct7 */
 `define FN7_MUL_DIV         7'h01
 `define FN7_SRL             7'h00
@@ -203,37 +205,110 @@
 /* Minor OPCODE specified by funct12 for SYSTEM insns */
 `define FN12_SCALL          12'h000
 `define FN12_SBREAK         12'h001
-`define FN12_SRET           12'h800
+`define FN12_SRET           12'h102
+`define FN12_MRET           12'h302
 
+/* CSR addresses */
+/* Unprivileged Floating-Point CSRs */
 `define CSR_FFLAGS          12'h001 
 `define CSR_FRM             12'h002
 `define CSR_FCSR            12'h003
-`define CSR_STATS           12'h0c0
-`define CSR_SUP0            12'h500
-`define CSR_SUP1            12'h501
-`define CSR_EPC             12'h502
-`define CSR_BADVADDR        12'h503
-`define CSR_PTBR            12'h504
-`define CSR_ASID            12'h505
-`define CSR_COUNT           12'h506
-`define CSR_COMPARE         12'h507
-`define CSR_EVEC            12'h508
-`define CSR_CAUSE           12'h509
-`define CSR_STATUS          12'h50a
-`define CSR_HARTID          12'h50b
-`define CSR_IMPL            12'h50c
-`define CSR_FATC            12'h50d
-`define CSR_SEND_IPI        12'h50e
-`define CSR_CLEAR_IPI       12'h50f
-`define CSR_RESET           12'h51d
-`define CSR_TOHOST          12'h51e
-`define CSR_FROMHOST        12'h51f
+/* Unprivileged Counter/Timers */
 `define CSR_CYCLE           12'hc00
 `define CSR_TIME            12'hc01
 `define CSR_INSTRET         12'hc02
-`define CSR_CYCLEH          12'hc80
-`define CSR_TIMEH           12'hc81
-`define CSR_INSTRETH        12'hc82
+/* Supervisor CSRs */
+`define CSR_SSTATUS         12'h100
+`define CSR_SIE             12'h104
+`define CSR_STVEC           12'h105
+`define CSR_SCOUNTEREN      12'h106
+`define CSR_SENVCFG         12'h10A
+`define CSR_SSCRATCH        12'h140
+`define CSR_SEPC            12'h141
+`define CSR_SCAUSE          12'h142
+`define CSR_STVAL           12'h143
+`define CSR_SIP             12'h144
+`define CSR_SATP            12'h180
+/* Machine Level CSRs */
+`define CSR_MVENDORID       12'hf11
+`define CSR_MARCHID         12'hf12
+`define CSR_MIMPID          12'hf13
+`define CSR_MHARTID         12'hf14
+`define CSR_MCONFIGPTR      12'hf15
+`define CSR_MSTATUS         12'h300
+`define CSR_MISA            12'h301
+`define CSR_MEDELEG         12'h302
+`define CSR_MIDELEG         12'h303
+`define CSR_MIE             12'h304
+`define CSR_MTVEC           12'h305
+`define CSR_MCOUNTEREN      12'h306
+`define CSR_MSCRATCH        12'h340
+`define CSR_MEPC            12'h341
+`define CSR_MCAUSE          12'h342
+`define CSR_MTVAL           12'h343
+`define CSR_MIP             12'h344
+`define CSR_MTINST          12'h34a
+`define CSR_MTVAL2          12'h34b
+`define CSR_MENVCFG         12'h30a
+`define CSR_PMPCFG0         12'h3A0
+`define CSR_PMPCFG2         12'h3A2
+`define CSR_PMPADDR0        12'h3B0
+`define CSR_PMPADDR1        12'h3B1
+`define CSR_PMPADDR2        12'h3B2
+`define CSR_PMPADDR3        12'h3B3
+`define CSR_PMPADDR4        12'h3B4
+`define CSR_PMPADDR5        12'h3B5
+`define CSR_PMPADDR6        12'h3B6
+`define CSR_PMPADDR7        12'h3B7
+`define CSR_PMPADDR8        12'h3B8
+`define CSR_PMPADDR9        12'h3B9
+`define CSR_PMPADDR10       12'h3BA
+`define CSR_PMPADDR11       12'h3BB
+`define CSR_PMPADDR12       12'h3BC
+`define CSR_PMPADDR13       12'h3BD
+`define CSR_PMPADDR14       12'h3BE
+`define CSR_PMPADDR15       12'h3BF
+`define CSR_MCYCLE          12'hB00
+`define CSR_MINSTRET        12'hB02
+
+// SSTATUS CSR BITS
+`define SSTATUS_SIE   64'h0000000000000002
+`define SSTATUS_SPIE  64'h0000000000000020
+`define SSTATUS_UBE   64'h0000000000000040
+`define SSTATUS_SPP   64'h0000000000000100
+`define SSTATUS_FS    64'h0000000000006000
+`define SSTATUS_XS    64'h0000000000018000
+`define SSTATUS_SUM   64'h0000000000040000
+`define SSTATUS_MXR   64'h0000000000080000
+`define SSTATUS_UXL   64'h0000000300000000
+`define SSTATUS_SD    64'h8000000000000000
+
+// MSTATUS CSR BITS
+`define MSTATUS_SIE   64'h0000000000000002
+`define MSTATUS_MIE   64'h0000000000000008
+`define MSTATUS_SPIE  64'h0000000000000020
+`define MSTATUS_UBE   64'h0000000000000040
+`define MSTATUS_MPIE  64'h0000000000000080
+`define MSTATUS_SPP   64'h0000000000000100
+`define MSTATUS_VS    64'h0000000000000600
+`define MSTATUS_MPP   64'h0000000000001800
+`define MSTATUS_FS    64'h0000000000006000
+`define MSTATUS_XS    64'h0000000000018000
+`define MSTATUS_MPRV  64'h0000000000020000
+`define MSTATUS_SUM   64'h0000000000040000
+`define MSTATUS_MXR   64'h0000000000080000
+`define MSTATUS_TVM   64'h0000000000100000
+`define MSTATUS_TW    64'h0000000000200000
+`define MSTATUS_TSR   64'h0000000000400000
+`define MSTATUS_UXL   64'h0000000300000000
+`define MSTATUS_SXL   64'h0000000D00000000
+`define MSTATUS_SBE   64'h0000001000000000
+`define MSTATUS_MBE   64'h0000002000000000
+`define MSTATUS_SD    64'h8000000000000000
+
+// SXL = UXL = 2'b10 for 64 bit
+`define MSTATUS_UXL_64   64'h0000000200000000
+`define MSTATUS_SXL_64   64'h0000000800000000
 
 `define SR_S              64'h0000000000000001
 `define SR_PS             64'h0000000000000002
@@ -254,6 +329,21 @@
 `define IRQ_IPI           5
 `define IRQ_HOST          6
 `define IRQ_TIMER         7
+
+// interrupt bits in MIE/MIP CSR registers
+`define IRQ_S_SOFT        1
+`define IRQ_M_SOFT        3
+`define IRQ_S_TIMER       5
+`define IRQ_M_TIMER       7
+`define IRQ_S_EXT         9
+`define IRQ_M_EXT        11
+
+`define MIP_SSIP (1 << `IRQ_S_SOFT)
+`define MIP_MSIP (1 << `IRQ_M_SOFT)
+`define MIP_STIP (1 << `IRQ_S_TIMER)
+`define MIP_MTIP (1 << `IRQ_M_TIMER)
+`define MIP_SEIP (1 << `IRQ_S_EXT)
+`define MIP_MEIP (1 << `IRQ_M_EXT)
 
 `define IMPL_SPIKE        1
 `define IMPL_ROCKET       2
@@ -282,25 +372,26 @@
 
 
 `define CSR_STATUS_MASK   (64'h00000000ffffffff & ~`SR_EA & ~`SR_ZERO)
-`define CSR_FFLAGS_MASK   64'h00000000ffffffff
+`define CSR_FFLAGS_MASK   64'h000000000000001f
 `define CSR_FRM_MASK      64'h00000000ffffffff
 `define CSR_COMPARE_MASK  64'h00000000ffffffff
 
 
-`define EXCEPTION_CAUSE_LOG      4
+`define EXCEPTION_CAUSE_LOG           4
 `define CAUSE_MISALIGNED_FETCH        4'h0
 `define CAUSE_FAULT_FETCH             4'h1
 `define CAUSE_ILLEGAL_INSTRUCTION     4'h2
-`define CAUSE_PRIVILEGED_INSTRUCTION  4'h3
-`define CAUSE_FP_DISABLED             4'h4
-`define CAUSE_SYSCALL                 4'h6
-`define CAUSE_BREAKPOINT              4'h7
-`define CAUSE_MISALIGNED_LOAD         4'h8
-`define CAUSE_MISALIGNED_STORE        4'h9
-`define CAUSE_FAULT_LOAD              4'ha
-`define CAUSE_FAULT_STORE             4'hb
-`define CAUSE_ACCELERATOR_DISABLED    4'hc
-`define CAUSE_CSR_INSTRUCTION         4'hd
+`define CAUSE_BREAKPOINT              4'h3
+`define CAUSE_MISALIGNED_LOAD         4'h4
+`define CAUSE_FAULT_LOAD              4'h5
+`define CAUSE_MISALIGNED_STORE        4'h6
+`define CAUSE_FAULT_STORE             4'h7
+`define CAUSE_ECALL_UMODE             4'h8
+`define CAUSE_ECALL_SMODE             4'h9
+`define CAUSE_ECALL_MMODE             4'hb
+`define CAUSE_INST_PAGE_FAULT         4'hc
+`define CAUSE_LOAD_PAGE_FAULT         4'hd
+`define CAUSE_STORE_PAGE_FAULT        4'hf
 
 /* TODO Anil : Should we have a Toggle insn */ 
 /* Instruction to test liveness of a chip */

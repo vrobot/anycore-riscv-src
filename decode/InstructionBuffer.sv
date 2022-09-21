@@ -95,7 +95,6 @@ wire                                    instBufferFull;
 `endif
 
 renPkt                                  renPacket_t [0:`DISPATCH_WIDTH-1];
-renPkt                                  renPacket_temp [0:`DISPATCH_WIDTH-1];	//Changes: Mohit
 logic [`DISPATCH_WIDTH-1:0]             renPacketValid;
 
 // Logic used for dispatching CSR instructions atomically
@@ -133,7 +132,9 @@ begin
     renPacket_o[i].isCSR        = instBufferReady_o & instValidMask[i] & renPacket_t[i].isCSR        ; 
     renPacket_o[i].isScall      = instBufferReady_o & instValidMask[i] & renPacket_t[i].isScall      ; 
     renPacket_o[i].isSbreak     = instBufferReady_o & instValidMask[i] & renPacket_t[i].isSbreak     ; 
+    renPacket_o[i].isFenceI     = instBufferReady_o & instValidMask[i] & renPacket_t[i].isFenceI     ;
     renPacket_o[i].isSret       = instBufferReady_o & instValidMask[i] & renPacket_t[i].isSret       ; 
+    renPacket_o[i].isMret       = instBufferReady_o & instValidMask[i] & renPacket_t[i].isMret       ;
     renPacket_o[i].skipIQ       = instBufferReady_o & instValidMask[i] & renPacket_t[i].skipIQ       ; 
   end
 end
@@ -226,35 +227,6 @@ end
 
 assign stallForCsr_o = stallForCsr | stallForExcpt;
 
-/*------------------Changes: Mohit--------------------*/
-// Instruction_Buffer is the stage where further instruction from frontend are stalled. 
-// Hence at this stage we check value of CSR which is the most recent value since CSRs 
-// are updated atomically. If the SR_EF flag in CSR_status register is cleared then the 
-// FP-unit till this point is disabled and hence an exception is raised. This exception 
-// is then handled by the trap-handler which sets this bit in CSR_STATUS register and 
-// continues execution. The contents of the instructions in buffer are modified and 
-// then passed on to the DISPATCH stage.
-always_comb	
-begin
-	int i;
-
-	for(i=0; i<`DISPATCH_WIDTH; i++)
-  	begin
-   	    renPacket_t[i]            = renPacket_temp[i];
-
-    	    case(renPacket_temp[i].inst[`SIZE_OPCODE_P-1:0])	
-    	    	`OP_LOAD_FP, `OP_STORE_FP, `OP_OP_FP: begin
-    	    	    if(!(|(csr_status_i & `SR_EF))) begin
-    	    	         renPacket_t[i].exception = 1'b1;
-    	    	         renPacket_t[i].exceptionCause = `CAUSE_FP_DISABLED;
-    	    	    end
-    	    	end
-    	    endcase
-	end
-end
-/*----------------------------------------------------*/
-
-
 /* Following instantiate multiported FIFO for Instruction Buffer. */
 
 IBUFF_RAM #(
@@ -267,41 +239,41 @@ IBUFF_RAM #(
 	instBuffer(
 
 	.addr0_i     (rdAddrGated[0]),
-	.data0_o     (renPacket_temp[0]),		//Changes: Mohit (Temporary packet added).
+	.data0_o     (renPacket_t[0]),		//Changes: Mohit (Temporary packet added).
 
 `ifdef DISPATCH_TWO_WIDE
 	.addr1_i     (rdAddrGated[1]),
-	.data1_o     (renPacket_temp[1]),
+	.data1_o     (renPacket_t[1]),
 `endif
 
 `ifdef DISPATCH_THREE_WIDE
 	.addr2_i     (rdAddrGated[2]),
-	.data2_o     (renPacket_temp[2]),
+	.data2_o     (renPacket_t[2]),
 `endif
 
 `ifdef DISPATCH_FOUR_WIDE
 	.addr3_i     (rdAddrGated[3]),
-	.data3_o     (renPacket_temp[3]),
+	.data3_o     (renPacket_t[3]),
 `endif
 
 `ifdef DISPATCH_FIVE_WIDE
 	.addr4_i     (rdAddrGated[4]),
-	.data4_o     (renPacket_temp[4]),
+	.data4_o     (renPacket_t[4]),
 `endif
 
 `ifdef DISPATCH_SIX_WIDE
 	.addr5_i     (rdAddrGated[5]),
-	.data5_o     (renPacket_temp[5]),
+	.data5_o     (renPacket_t[5]),
 `endif
 
 `ifdef DISPATCH_SEVEN_WIDE
 	.addr6_i     (rdAddrGated[6]),
-	.data6_o     (renPacket_temp[6]),
+	.data6_o     (renPacket_t[6]),
 `endif
 
 `ifdef DISPATCH_EIGHT_WIDE
 	.addr7_i     (rdAddrGated[7]),
-	.data7_o     (renPacket_temp[7]),
+	.data7_o     (renPacket_t[7]),
 `endif
 
 

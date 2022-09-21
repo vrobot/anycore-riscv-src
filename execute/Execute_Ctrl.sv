@@ -74,7 +74,7 @@ module Execute_Ctrl (
 	output wbPkt                         wbPacket_o,
 
 	/* all the bypasses coming from the different pipes */
-	input  bypassPkt                     bypassPacket_i [0:`ISSUE_WIDTH-1]
+	input  bypassPkt                     bypassPacket_i [0:`ISSUE_WIDTH-1],
 	);
 
 
@@ -110,6 +110,7 @@ ForwardCheck src2Bypass (
 
 
 wire [`CSR_WIDTH-1:0]             csrWrData;
+wire [`CSR_WIDTH-1:0]             csrWrEn;
 wire [`CSR_WIDTH_LOG-1:0]               csrWrAddr;
 wire                                   CSRwrValid;
 wire [`SIZE_PC-1:0]                    nextPC;
@@ -135,7 +136,7 @@ Ctrl_ALU ctrlAlu(
   .csrWrEn_o                          (csrWrEn),
 	.nextPC_o                           (nextPC),
 	.direction_o                        (computedDir),
-	.flags_o                            (flags)
+	.flags_o                            (flags),
 	);
 
 

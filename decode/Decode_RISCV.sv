@@ -19,6 +19,7 @@
 `timescale 1ns/100ps
 
 
+import riscv_structs::*;
 module Decode_RISCV (
 
 `ifdef DYNAMIC_CONFIG
@@ -26,6 +27,7 @@ module Decode_RISCV (
 `endif
 
     input  decPkt                     decPacket_i,
+    input riscv_structs::privilege_t  priv_lvl_i,
 
     output renPkt                     ibPacket0_o,
     output renPkt                     ibPacket1_o
@@ -66,7 +68,9 @@ reg                                     instStore_0;
 reg                                     instCSR_0;
 reg                                     instScall_0;
 reg                                     instSbreak_0;
+reg                                     instFenceI_0;
 reg                                     instSret_0;
+reg                                     instMret_0;
 reg                                     instSkipIQ_0;
 reg [`EXCEPTION_CAUSE_LOG-1:0]               instExceptionCause_0; 
 reg                                     instException_0;
@@ -92,7 +96,9 @@ begin
     ibPacket0_o.isCSR          = instCSR_0;
     ibPacket0_o.isScall        = instScall_0;
     ibPacket0_o.isSbreak       = instSbreak_0;
+    ibPacket0_o.isFenceI       = instFenceI_0;
     ibPacket0_o.isSret         = instSret_0;
+    ibPacket0_o.isMret         = instMret_0;
     ibPacket0_o.skipIQ         = instSkipIQ_0;
     ibPacket0_o.ldstSize       = instldstSize_0;
     ibPacket0_o.ctrlType       = decPacket_i.ctrlType;
@@ -151,7 +157,9 @@ begin
   instSkipIQ_0     = 0;
   instScall_0      = 0;
   instSbreak_0     = 0;
+  instFenceI_0     = 0;
   instSret_0       = 0;
+  instMret_0       = 0;
   instExceptionCause_0    = 0;
   instException_0    = 0;
 
@@ -337,7 +345,12 @@ begin
                  case(instFunct12)
                    `FN12_SCALL : begin
                      instScall_0  = 1'b1;
-                     instExceptionCause_0    = `CAUSE_SYSCALL;
+                     case (priv_lvl_i)
+                         MACHINE_PRIVILEGE:    instExceptionCause_0 = `CAUSE_ECALL_MMODE;
+                         SUPERVISOR_PRIVILEGE: instExceptionCause_0 = `CAUSE_ECALL_SMODE;
+                         USER_PRIVILEGE:       instExceptionCause_0 = `CAUSE_ECALL_UMODE;
+                         default:;
+                     endcase
                      instException_0    = 1'b1;
                    end
                    `FN12_SBREAK: begin
@@ -347,6 +360,10 @@ begin
                    end
                    `FN12_SRET  : begin
                      instSret_0   = 1'b1;
+                     instCSR_0    = 1'b0; //Do not read or write any CSRs, neither is it dispatched atomically
+                   end
+                   `FN12_MRET  : begin
+                     instMret_0   = 1'b1;
                      instCSR_0    = 1'b0; //Do not read or write any CSRs, neither is it dispatched atomically
                    end
                   endcase
@@ -398,6 +415,13 @@ begin
 
  // FENCE instructions
  `OP_MISC_MEM: begin
+           case (instFunct3)
+               `FN3_FENCEI:
+               begin
+           instFenceI_0     = 1'b1;
+               end
+               default:;
+           endcase
            instCSR_0        = 1'b1;
            instFU_0         = `CONTROL_TYPE;
           end

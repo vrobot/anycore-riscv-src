@@ -40,10 +40,17 @@ module ICache_controller#(
     input  [`ICACHE_BITS_IN_LINE-1:0]      mem2icData_i,      // requested data
     input                               mem2icRespValid_i, // indicates the requested data is ready
 
+    input                               mem2icInv_i,     // icache invalidation
+    input  [`ICACHE_INDEX_BITS-1:0]     mem2icInvInd_i,  // icache invalidation index
+    input  [0:0]                        mem2icInvWay_i,  // icache invalidation way (unused)
+
     input [`ICACHE_INDEX_BITS+`ICACHE_BYTES_IN_LINE_LOG-1:0]  icScratchWrAddr_i,
     input                                                     icScratchWrEn_i,
     input [7:0]                                               icScratchWrData_i,
     output [7:0]                                              icScratchRdData_o,
+
+    input                               icFlush_i,
+    output reg                          icFlushDone_o,
   `endif
 
     input                               mmuException_i,
@@ -418,18 +425,25 @@ module ICache_controller#(
 
   always_ff @(posedge clk or posedge reset)
   begin
-    if(reset)
+    if(reset | icFlush_i)
     begin
       int i;
       for(i = 0; i < `ICACHE_NUM_LINES;i++)
         valid_array[i] <= 1'b0;
     end
-    else
+    else if(mem2icInv_i)
     begin
-      if(fillValid)
-        valid_array[fillIndex] <= 1'b1;
+      valid_array[mem2icInvInd_i] <= 1'b0;
+    end
+    else if(fillValid)
+    begin
+      valid_array[fillIndex] <= 1'b1;
     end
   end
 
+  always_ff @(posedge clk)
+  begin
+    icFlushDone_o <= icFlush_i;
+  end
 `endif //`ifdef INST_CACHE
 endmodule

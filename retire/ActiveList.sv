@@ -2,17 +2,17 @@
 #                        NORTH CAROLINA STATE UNIVERSITY
 #
 #                              AnyCore Project
-# 
+#
 # AnyCore written by NCSU authors Rangeen Basu Roy Chowdhury and Eric Rotenberg.
-# 
-# AnyCore is based on FabScalar which was written by NCSU authors Niket K. 
+#
+# AnyCore is based on FabScalar which was written by NCSU authors Niket K.
 # Choudhary, Brandon H. Dwiel, and Eric Rotenberg.
-# 
-# AnyCore also includes contributions by NCSU authors Elliott Forbes, Jayneel 
-# Gandhi, Anil Kumar Kannepalli, Sungkwan Ku, Hiran Mayukh, Hashem Hashemi 
-# Najaf-abadi, Sandeep Navada, Tanmay Shah, Ashlesha Shastri, Vinesh Srinivasan, 
+#
+# AnyCore also includes contributions by NCSU authors Elliott Forbes, Jayneel
+# Gandhi, Anil Kumar Kannepalli, Sungkwan Ku, Hiran Mayukh, Hashem Hashemi
+# Najaf-abadi, Sandeep Navada, Tanmay Shah, Ashlesha Shastri, Vinesh Srinivasan,
 # and Salil Wadhavkar.
-# 
+#
 # AnyCore is distributed under the BSD license.
 *******************************************************************************/
 
@@ -59,6 +59,10 @@
    9. Exception is handled at the head of the ActiveList. On an exception, AMT
       is copied into RMT.
 
+   // Changes: bgergely0
+   10. fence.i is handled similarly to a branch misprediction in the ActiveList.
+     The icFlush_o signal invalidates the L1ICache.
+
 
 ****************************************************************************/
 //`ifdef GATE_SIM
@@ -70,13 +74,13 @@ module ActiveList (
 	input                                  reset,
 	input                                  resetRams_i,
 
-`ifdef DYNAMIC_CONFIG  
+`ifdef DYNAMIC_CONFIG
   input [`DISPATCH_WIDTH-1:0]            dispatchLaneActive_i,
   input [`ISSUE_WIDTH-1:0]               issueLaneActive_i,
   input [`COMMIT_WIDTH-1:0]              commitLaneActive_i,
   input [`NUM_PARTS_AL-1:0]              alPartitionActive_i,
   input                                  squashPipe_i,
-`endif  
+`endif
 
 //`ifdef DATA_CACHE
   input                                  stallStCommit_i, // Indicates that store write-through buffer is full
@@ -95,6 +99,7 @@ module ActiveList (
   input  [`SIZE_PC-1:0]                  csr_evec_i,
   input  [`SIZE_PC-1:0]                  csr_epc_i,
   output                                 sretFlag_o,
+  output                                 mretFlag_o,
 
 	/* input  [`SIZE_ACTIVELIST_LOG:0]        ldViolationPacket_i, */
 
@@ -111,13 +116,13 @@ module ActiveList (
 	output commitPkt                       amtPacket_o [0:`COMMIT_WIDTH-1],
 
 `ifdef PERF_MON
-  output  reg [`COMMIT_WIDTH-1:0]        commitValid_o,                 
+  output  reg [`COMMIT_WIDTH-1:0]        commitValid_o,
 `endif
 
-  output     [`COMMIT_WIDTH_LOG:0]       totalCommit_o,                 
+  output     [`COMMIT_WIDTH_LOG:0]       totalCommit_o,
 	output reg [`COMMIT_WIDTH-1:0]         commitStore_o,
 	output reg [`COMMIT_WIDTH-1:0]         commitLoad_o,
-	
+
 	output reg [`COMMIT_WIDTH-1:0]         commitCti_o,
 	output reg [`COMMIT_WIDTH-1:0]         actualDir_o,
 	output reg [`COMMIT_WIDTH-1:0]         ctrlType_o,
@@ -133,7 +138,8 @@ module ActiveList (
 
 	output                                 loadViolation_o,
   output                                 alRamReady_o,
-  output     [`CSR_WIDTH-1:0]            csr_fflags_o
+    output     [`CSR_WIDTH-1:0]            csr_fflags_o,
+    output                                 icFlush_o
 	);
 
 
@@ -157,7 +163,11 @@ reg                                 violateFlag_reg;
 reg                                 fissionViolation;
 
 reg                                 sretFlag [0:`COMMIT_WIDTH-1];
+reg                                 mretFlag [0:`COMMIT_WIDTH-1];
 reg                                 csrViolateFlag [0:`COMMIT_WIDTH-1];
+
+reg                                 fenceFlag [0:`COMMIT_WIDTH-1];
+reg                                 fenceFlag_reg;
 
 reg  [`SIZE_PC-1:0]                 recoverPC;
 
@@ -212,7 +222,7 @@ always @(posedge clk) begin
 end
 
 always @(posedge clk) begin
-    if (prevCommitPC != currentCommitPC) begin
+    if (totalCommit != 0) begin
         $display("currentCommitPC changed from 0x%x to 0x%x", prevCommitPC, currentCommitPC);
     end
 end
@@ -226,6 +236,7 @@ end
   wire alVioReady;
 `endif
 
+assign icFlush_o = fenceFlag_reg;
 
 /************************************************************************************
    Following instantiates RAM modules for Active List. 2 seperate RAM modules have
@@ -580,7 +591,7 @@ ALREADY_RAM #(
 	.addr11wr_i (headAddr[1]),
 	.we11_i     (commitVector_t1[1]),
 	.data11wr_i (1'h0),
-`endif  
+`endif
 
 `ifdef COMMIT_THREE_WIDE
 	.addr12wr_i (headAddr[2]),
@@ -602,7 +613,7 @@ ALREADY_RAM #(
 `endif
 
 	.clk        (clk),
-	.reset      (reset | violateFlag_reg | mispredFlag_reg | exceptionFlag_reg)
+	.reset      (reset | violateFlag_reg | mispredFlag_reg | exceptionFlag_reg | fenceFlag_reg)
 
 	);
 
@@ -684,7 +695,7 @@ ALNPC_RAM #(
   .issueLaneActive_i(issueLaneActive_i),
   .alPartitionActive_i(alPartitionActive_i),
   .alNPcReady_o(alNPcReady),
-`endif  
+`endif
 
 	.clk        (clk)
 	//.reset      (reset | violateFlag_reg | mispredFlag_reg | exceptionFlag_reg)
@@ -731,7 +742,7 @@ ALVIO_RAM #(
 `endif
 
 	.clk        (clk),
-	.reset      (reset | violateFlag_reg | mispredFlag_reg | exceptionFlag_reg)
+	.reset      (reset | violateFlag_reg | mispredFlag_reg | exceptionFlag_reg | fenceFlag_reg)
 	);
 
 
@@ -780,12 +791,12 @@ ALEXCPT_RAM #(
 `endif
 
 	.clk        (clk),
-	.reset      (reset | violateFlag_reg | mispredFlag_reg | exceptionFlag_reg)
+	.reset      (reset | violateFlag_reg | mispredFlag_reg | exceptionFlag_reg | fenceFlag_reg)
 	);
 
 
 /*-----------------------Changes: Mohit----------------------*/
-// RAM instance for Floating-point Exception bits corresponding to all FP 
+// RAM instance for Floating-point Exception bits corresponding to all FP
 // instructions. The exception bits are then updated in CSR_FFLAGS during retire
 ALEXCPT_RAM #(
   .RPORT      (`COMMIT_WIDTH),
@@ -829,11 +840,11 @@ ALEXCPT_RAM #(
 reg [`CSR_WIDTH-1:0]	csr_fflags_temp;
 // Combine the exception flags of all the retiring insturctions together
 always_comb
-begin	
+begin
 	int i;
 	csr_fflags_temp = (dataAl[0].isFP & dataAl[0].valid & commitReady[0])?fp_exceptionAl[0]:64'h0;
 	for(i = 1; i < `COMMIT_WIDTH; i++) begin
-		csr_fflags_temp = csr_fflags_temp | ((dataAl[i].isFP & dataAl[i].valid & commitReady[i])?fp_exceptionAl[i]:64'h0); 
+		csr_fflags_temp = csr_fflags_temp | ((dataAl[i].isFP & dataAl[i].valid & commitReady[i])?fp_exceptionAl[i]:64'h0);
 	end
 end
 
@@ -850,7 +861,7 @@ reg [`DISPATCH_WIDTH_LOG:0] numDispatchLaneActive;
 reg  [`SIZE_ACTIVELIST_LOG:0]       alSize;
 always_comb
 begin
-`ifdef DYNAMIC_CONFIG  
+`ifdef DYNAMIC_CONFIG
   int i;
   numDispatchLaneActive = 0;
   for(i = 0; i < `DISPATCH_WIDTH; i++)
@@ -859,10 +870,10 @@ begin
   case(alPartitionActive_i)
     6'b111111:alSize =  `SIZE_ACTIVELIST;
     6'b011111:alSize =  `SIZE_ACTIVELIST - ((`SIZE_ACTIVELIST/`NUM_PARTS_AL)*1);
-    6'b001111:alSize =  `SIZE_ACTIVELIST - ((`SIZE_ACTIVELIST/`NUM_PARTS_AL)*2); 
-    6'b000111:alSize =  `SIZE_ACTIVELIST - ((`SIZE_ACTIVELIST/`NUM_PARTS_AL)*3); 
-    6'b000011:alSize =  `SIZE_ACTIVELIST - ((`SIZE_ACTIVELIST/`NUM_PARTS_AL)*4); 
-    6'b000001:alSize =  `SIZE_ACTIVELIST - ((`SIZE_ACTIVELIST/`NUM_PARTS_AL)*5); 
+    6'b001111:alSize =  `SIZE_ACTIVELIST - ((`SIZE_ACTIVELIST/`NUM_PARTS_AL)*2);
+    6'b000111:alSize =  `SIZE_ACTIVELIST - ((`SIZE_ACTIVELIST/`NUM_PARTS_AL)*3);
+    6'b000011:alSize =  `SIZE_ACTIVELIST - ((`SIZE_ACTIVELIST/`NUM_PARTS_AL)*4);
+    6'b000001:alSize =  `SIZE_ACTIVELIST - ((`SIZE_ACTIVELIST/`NUM_PARTS_AL)*5);
     default:  alSize =  `SIZE_ACTIVELIST;
   endcase
 
@@ -881,7 +892,8 @@ end
 * In case of control mis-prediction, nextPC is the target address.
 *******************************************************************************/
 /* TODO: Disjoin violateFlag_reg and mispredFlag_reg */
-assign recoverFlag_o    = violateFlag_reg | mispredFlag_reg | exceptionFlag_reg;
+assign recoverFlag_o    = violateFlag_reg | mispredFlag_reg | exceptionFlag_reg
+	| fenceFlag_reg;
 assign recoverPC_o      = (mispredFlag_reg) ? targetPC : recoverPC;
 
 assign loadViolation_o  = loadViolation;
@@ -1005,38 +1017,42 @@ begin
 	for (i = 0; i < `COMMIT_WIDTH; i = i + 1)
 	begin
 	/* The violate flag is used to mark a load violation.
-	 * An instruction with the violate bit set waits until it reaches 
+	 * An instruction with the violate bit set waits until it reaches
 	 * the head of the AL and then causes a recovery without committing. */
 		/* violateFlag[i]    = violateBit[i] && commitReady[i] || fissionViolation; */
 		violateFlag[i]    = (violateBit[i] && commitReady[i]) | interruptPulse;
 
     csrViolateFlag[i] = csrViolateFlag_i & commitReady[i] & dataAl[i].isCSR;
 
-    // Prevent an sret instruction from retiring until it is at the head of the activeList.
-    // Also prevent any instruction after the sret to retire.
+    // Prevent an xret instruction from retiring until it is at the head of the activeList.
+    // Also prevent any instruction after the xret to retire.
     sretFlag[i] = dataAl[i].isSret & commitReady[i];
+    mretFlag[i] = dataAl[i].isMret & commitReady[i];
 
 	/* The mispredict flag is used to mark a misprediction.
-	 * An instruction with the mispredict bit set commits only at 
+	 * An instruction with the mispredict bit set commits only at
 	 * the head of the AL. */
 		mispredFlag[i]    = ctrlAl[i][0] && commitReady[i];
 
-	/* The exception flag is used to mark the system call. 
-	 * An instruction with the exception bit set waits until it reaches 
-	 * the head of the AL before committing. After it has committed, 
+    fenceFlag[i] = dataAl[i].isFenceI & commitReady[i];
+
+	/* The exception flag is used to mark the system call.
+	 * An instruction with the exception bit set waits until it reaches
+	 * the head of the AL before committing. After it has committed,
 	 * a recovery occurs and the system call is handled. */
 		//exceptionFlag[i]  = ctrlAl[i][1] && commitReady[i];
 		exceptionFlag[i]  = (exceptionAl[i].exception && commitReady[i]) |
                         (exceptionAl[i].exception & dataAl[i].valid);//(dataAl[i].isScall | dataAl[i].isSbreak));
 
 	end
-	violateFlag[0]    = (violateBit[0] && commitReady[0]) || 
+	violateFlag[0]    = (violateBit[0] && commitReady[0]) ||
                       (violateBit[1] && commitReady[0] && commitReady[1] && ctrlAl[0][3]) ||
                       interruptPulse;
 
 end
 
 assign sretFlag_o = sretFlag[0];
+assign mretFlag_o = mretFlag[0];
 
 logic [`COMMIT_WIDTH-1:0] htifCommitMask;
 logic [6:0]               instret;
@@ -1082,7 +1098,7 @@ begin:COMMIT
 
 	totalCommit          = 0;
 
-	for (i = 0; i < `COMMIT_WIDTH; i = i + 1) 
+	for (i = 0; i < `COMMIT_WIDTH; i = i + 1)
 	begin
 		amtPacket_o[i]      = {`COMMIT_PKT_SIZE{1'b0}};
 
@@ -1106,21 +1122,23 @@ begin:COMMIT
 `endif
 
   // LANE: Per Lane Logic
-  // The instruction at the head of the AL commits in cases of misprediction and an SRET instructions.
+  // The instruction at the head of the AL commits in cases of misprediction and an xRET instruction.
   // In all other cases, it is squashed along with everything else.
 	commitVector_f[0] = (alCount > 0) & commitReady[0] & ~violateFlag[0] & ~csrViolateFlag[0]  & ~exceptionFlag[0];
 
-	for (i = 1; i < `COMMIT_WIDTH; i = i + 1) 
+	for (i = 1; i < `COMMIT_WIDTH; i = i + 1)
 	begin
-		commitVector_f[i] = ( alCount > i) & commitReady[i] & 
+		commitVector_f[i] = ( alCount > i) & commitReady[i] &
                           ~mispredFlag[i] & ~mispredFlag[0] &
+                           ~fenceFlag[i]   & ~fenceFlag[0] &
                           ~sretFlag[i]    & ~sretFlag[0] &
-		                      ~violateFlag[i] & ~csrViolateFlag[i] & 
+                          ~mretFlag[i]    & ~mretFlag[0] &
+		                      ~violateFlag[i] & ~csrViolateFlag[i] &
                           ~exceptionFlag[i];
 	end
 
 	/* Retire the fission instructions together */
-	for (i = 0; i < `COMMIT_WIDTH-1; i = i + 1) 
+	for (i = 0; i < `COMMIT_WIDTH-1; i = i + 1)
 	begin
 		if (commitFission[i])
 		begin
@@ -1160,7 +1178,7 @@ begin:COMMIT
 
   // If there's a Data Cache, make sure that the write through
   // buffer is not full. If full, don't commit anything.
-  // This is too restrictive as non-store instructions should be 
+  // This is too restrictive as non-store instructions should be
   // allowed to commit.
 `ifdef DATA_CACHE
   commitVector = stallStCommit_i ? {`COMMIT_WIDTH{1'b0}} :  commitVector;
@@ -1185,19 +1203,19 @@ begin:COMMIT
       commitVector_t1 = 4'h3;
       totalCommit     = 2;
     end
-`endif    
+`endif
 `ifdef COMMIT_THREE_WIDE
     4'b0111:  begin
       commitVector_t1 = 4'h7;
       totalCommit     = 3;
     end
-`endif    
+`endif
 `ifdef COMMIT_FOUR_WIDE
     4'b1111:  begin
       commitVector_t1 = 4'hf;
       totalCommit     = 4;
     end
-`endif    
+`endif
     default: begin
       commitVector_t1 = 4'h0;
       totalCommit     = 0;
@@ -1207,10 +1225,10 @@ begin:COMMIT
   // LANE: Per lane logic
   // Control signals are low if commitVector_t1 for
   // a particular lane is 0
-	for (i = 0; i < `COMMIT_WIDTH; i = i + 1) 
+	for (i = 0; i < `COMMIT_WIDTH; i = i + 1)
 	begin
     amtPacket_o[i].seqNo      = dataAl[i].seqNo;
-		amtPacket_o[i].logDest    = dataAl[i].logDest; 
+		amtPacket_o[i].logDest    = dataAl[i].logDest;
 		amtPacket_o[i].phyDest    = dataAl[i].phyDest;
 		amtPacket_o[i].valid      = dataAl[i].phyDestValid & commitVector_t1[i];
 		commitStore_o[i]          = dataAl[i].isStore & commitVector_t1[i];
@@ -1247,7 +1265,7 @@ end
 /* Compute tail and head pointers for the next cycle
  * based upon dispatched and committed instruction counts. */
 
-// Putting in explicit wrap around logic so that arbitrary 
+// Putting in explicit wrap around logic so that arbitrary
 // AL sizes besides power of 2 can be supported
 // May 22, 2013  RBRC
 // LANE: Monolithic Logic
@@ -1271,7 +1289,7 @@ begin: POINTER_UPDATE
 
   // Discard the MSB which is used only for correct wrap around logic
   headPtr_next = headPtr_next_t[`SIZE_ACTIVELIST_LOG-1:0];
-  
+
 
   /* Compute tailPtr_next */
   // numdispatchLaneActive is constant in case of STATIC_CONFIG
@@ -1287,14 +1305,14 @@ begin: POINTER_UPDATE
   // Discard the MSB which is used only for correct wrap around logic
   tailPtr_next = tailPtr_next_t[`SIZE_ACTIVELIST_LOG-1:0];
 
-end    
+end
 
 /* Update the Active List tail pointer:
  * Set the tail pointer to 0 if there is a recovery.
  * Else, increment it by DISPATCH_WIDTH if dispatchReady_i is high. */
 
 /* Updates the Active List head pointer:
- * Increment the head pointer for each committing instruction. */ 
+ * Increment the head pointer for each committing instruction. */
 // LANE: Monolithic Logic
 always_ff @(posedge clk or posedge reset)
 begin
@@ -1306,7 +1324,7 @@ begin
 	end
   else
   begin
-    if(violateFlag_reg | mispredFlag_reg | exceptionFlag_reg)
+    if(violateFlag_reg | mispredFlag_reg | exceptionFlag_reg | fenceFlag_reg)
     begin
 		  headPtr  <= 0;
 		  tailPtr  <= {`SIZE_ACTIVELIST_LOG{1'b0}};
@@ -1319,11 +1337,12 @@ begin
 
     /* Maintain the active list occupancy count each cycle */
     // TODO: Why is the count reset one cycle in advance
-	  if ((violateFlag[0] | csrViolateFlag[0] | mispredFlag[0] | sretFlag[0] | exceptionFlag[0] | interruptPulse) & ~stallStCommit_i) // Delay recovery until ready to commit again
+	  if ((violateFlag[0] | csrViolateFlag[0] | mispredFlag[0] | sretFlag[0] | mretFlag[0]
+		  | exceptionFlag[0] | fenceFlag[0] | interruptPulse) & ~stallStCommit_i) // Delay recovery until ready to commit again
 	  	alCount <= 0;
-	  else if (violateFlag_reg | mispredFlag_reg | exceptionFlag_reg)
+	  else if (violateFlag_reg | mispredFlag_reg | exceptionFlag_reg | fenceFlag_reg)
 	  	alCount <= 0;
-	  else	
+	  else
       alCount <= alCount_next;
 
   end
@@ -1336,7 +1355,7 @@ assign alID_o             = tailAddr;
 assign activeListCnt_o    = alCount;
 
 
-/* Maintain the recover flag register. Recover flag 
+/* Maintain the recover flag register. Recover flag
  * will flush the pipeline when high. */
 
 // LANE: Monolithic Logic
@@ -1347,6 +1366,7 @@ begin
 		violateFlag_reg       <= 1'b0;
 		mispredFlag_reg       <= 1'b0;
 		exceptionFlag_reg     <= 1'b0;
+		fenceFlag_reg         <= 1'b0;
 		loadViolation         <= 1'b0;
 
 		targetPC              <= `SIZE_PC'h0;
@@ -1357,11 +1377,12 @@ begin
 
 	else
 	begin
-	  if (violateFlag_reg | mispredFlag_reg | exceptionFlag_reg)
+	  if (violateFlag_reg | mispredFlag_reg | exceptionFlag_reg | fenceFlag_reg)
     begin
 		  violateFlag_reg       <= 1'b0;
 		  mispredFlag_reg       <= 1'b0;
 		  exceptionFlag_reg     <= 1'b0;
+		  fenceFlag_reg         <= 1'b0;
 		  loadViolation         <= 1'b0;
 		  atomicityViolation    <= 1'b0;
 
@@ -1378,6 +1399,13 @@ begin
 		  	targetPC            <= targetAddr;
 		  end
 
+		  if (fenceFlag[0] & ~stallStCommit_i)
+		  begin
+		  	fenceFlag_reg       <= 1'b1;
+			// targetAddr is pc_p4 from Ctrl ALU
+		  	recoverPC           <= targetAddr;
+		  end
+
 		  if (violateFlag[0] & ~stallStCommit_i)
 		  begin
 		  	violateFlag_reg     <= 1'b1;
@@ -1392,8 +1420,8 @@ begin
 		  	atomicityViolation  <= 1'b1;
 		  end
 
-      // Use a delayed version of the sretFlag to allow the SRET instruction to commit
-		  if (sretFlag[0] & ~stallStCommit_i)
+      // Use a delayed version of the xretFlag to allow the xRET instruction to commit
+		  if (sretFlag[0] & ~stallStCommit_i || mretFlag[0] & ~stallStCommit_i)
 		  begin
 		  	violateFlag_reg     <= 1'b1;
 		  	recoverPC           <= csr_epc_i;
@@ -1437,10 +1465,10 @@ assign interruptPulse = interruptPending_i & ~interruptPending_d1;
   		commitPC[i]    = dataAl[i].pc;
   	end
   end
-  
+
   reg  [`SIZE_RMT_LOG-1:0]      logDest [0:3];
   reg  [`SIZE_PHYSICAL_LOG-1:0] phyDest [0:3];
-  
+
   always_comb
   begin
   	int i;
@@ -1459,7 +1487,7 @@ assign interruptPulse = interruptPending_i & ~interruptPending_d1;
   	for (index = 0 ; index < `COMMIT_WIDTH ; index++)
   		commitValid_o[index] = amtPacket_o[index].valid;
   end
-  
+
 `endif
 assign totalCommit_o = totalCommit;
 

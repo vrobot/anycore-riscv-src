@@ -20,7 +20,6 @@
 `define STRUCTS_SVH
 
 `include "CommonConfig.h"
-`include "RISCV_ISA.h"
 
 `ifdef DYNAMIC_CONFIG
 
@@ -121,7 +120,9 @@ typedef struct packed {
 	logic                                 isCSR;
 	logic                                 isScall;
 	logic                                 isSbreak;
+	logic                                 isFenceI;
 	logic                                 isSret;
+	logic                                 isMret;
 	logic                                 skipIQ;
 
 	logic [`BRANCH_TYPE_LOG-1:0]          ctrlType;
@@ -163,7 +164,9 @@ typedef struct packed {
 	logic                                 isCSR;
 	logic                                 isScall;
 	logic                                 isSbreak;
+	logic                                 isFenceI;
 	logic                                 isSret;
+	logic                                 isMret;
 	logic                                 skipIQ;
 
 	logic [`BRANCH_TYPE_LOG-1:0]          ctrlType;
@@ -235,7 +238,9 @@ typedef struct packed {
 	logic                                 isCSR;
 	logic                                 isScall;
 	logic                                 isSbreak;
+	logic                                 isFenceI;
 	logic                                 isSret;
+	logic                                 isMret;
 	logic                                 isFP;	//Changes: Mohit(Added isFP flag to alpacket)
 
   logic                                 valid;

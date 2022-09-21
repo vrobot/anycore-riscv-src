@@ -44,7 +44,7 @@ module Ctrl_ALU (
     output                         csrWrEn_o,
     output [`SIZE_PC-1:0]          nextPC_o,
     output                         direction_o,
-    output exeFlgs                 flags_o
+    output exeFlgs                 flags_o,
     );
 
 
@@ -230,6 +230,10 @@ begin:ALU_OPERATION
                begin
                    flags.executed          = 1'h1;
                end
+               `FN12_MRET:
+               begin
+                   flags.executed          = 1'h1;
+               end
             endcase
             end
 
@@ -240,13 +244,6 @@ begin:ALU_OPERATION
                `CSR_CYCLE,`CSR_TIME,`CSR_INSTRET,`CSR_FCSR,`CSR_FRM,`CSR_FFLAGS:
                begin
                    result                  = {{(`SIZE_PC-`CSR_WIDTH){1'b0}},data2_i};
-                   flags.executed          = 1'h1;
-                   flags.destValid         = destValid_i;
-               end
-
-               `CSR_CYCLEH,`CSR_TIMEH,`CSR_INSTRETH:
-               begin
-                   result                  = data2_i[`SIZE_DATA-1:32]; 
                    flags.executed          = 1'h1;
                    flags.destValid         = destValid_i;
                end
@@ -348,6 +345,14 @@ begin:ALU_OPERATION
 
         `OP_MISC_MEM:
         begin 
+           case (fn3)
+               `FN3_FENCEI:
+               begin
+          nextPC                  = pc_p4;
+          flags.destValid         = destValid_i;
+        end
+               default:;
+           endcase
           flags.executed          = 1'h1;
         end
         // NOTE: Need this default to make the case statement

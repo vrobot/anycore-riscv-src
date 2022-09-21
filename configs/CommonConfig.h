@@ -75,7 +75,7 @@
 //`define COMMIT_FOUR_WIDE
 
 // By default, synthesize with Designware components
-`define USE_DESIGNWARE
+//`define USE_DESIGNWARE
 
 
 /* Default configuration for ExecutionPipe_SC.
@@ -274,7 +274,7 @@
   `define DCACHE_BITS_IN_LINE (`DCACHE_WORDS_IN_LINE*`SIZE_DATA)  //In bits , using 64 for word size 
   `define DCACHE_BYTES_IN_LINE (`DCACHE_WORDS_IN_LINE*8) //Each word is 8 bytes in RISCV
   `define DCACHE_BYTES_IN_LINE_LOG (`DCACHE_WORDS_IN_LINE_LOG + `DCACHE_WORD_BYTE_OFFSET_LOG)
-  `define DCACHE_NUM_LINES 128
+  `define DCACHE_NUM_LINES 512
   `define DCACHE_NUM_LINES_LOG 7
   `define DCACHE_OFFSET_BITS  `DCACHE_WORDS_IN_LINE_LOG
   `define DCACHE_INDEX_BITS   `DCACHE_NUM_LINES_LOG
@@ -297,3 +297,31 @@
 `define CLK_GATE_CELL_FG TLATNCAX2TF
 `define CLK_GATE_CELL_UL TLATNCAX8TF
 
+/* MISA bits */
+
+`define MISA_A 1'b0            // Atomic extension
+// B reserved
+`define MISA_C 1'b0            // Compressed extension
+`define MISA_D 1'b`PIPE_HAS_FP // Double-precision floating-point extension
+`define MISA_E 1'b0            // RV32E base ISA
+`define MISA_F 1'b`PIPE_HAS_FP // Single-precision floating-point extension
+// G reserved
+`define MISA_H 1'b0            // Hypervisor extension
+`define MISA_I 1'b1            // RV32I/64I/128I base ISA
+// J reserved
+// K reserved
+// L reserved
+`define MISA_M 1'b1            // Integer Multiply/Divide extension
+// N reserved for User-Level Interrupts extension
+// O reserved
+// P reserved for Packed-SIMD extension
+`define MISA_Q 1'b0            // Quad-precision floating-point extension
+// R reserved
+`define MISA_S 1'b1            // Supervisor mode implemented
+// T reserved
+`define MISA_U 1'b1            // User mode implemented
+`define MISA_V 1'b0            // "V" Vector extension implemented
+// W reserved
+`define MISA_X 1'b0            // Non-standard extension present
+// Y reserved
+// Z reserved

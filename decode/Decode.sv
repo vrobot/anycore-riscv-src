@@ -32,6 +32,8 @@ module Decode(
 
 	input  decPkt                     decPacket_i [0:`FETCH_WIDTH-1],
 
+	input riscv_structs::privilege_t  priv_lvl_i,
+
   // Number of ibPacket is twice the number of decPacket because potentially,
   // each instruction can be a complex instruction and can be split into two
   // parts
@@ -63,6 +65,7 @@ Decode_RISCV decode_RISCV (
 `endif
 
 	.decPacket_i             (decPacket_i[g]),
+	.priv_lvl_i              (priv_lvl_i),
 
 	.ibPacket0_o             (ibPacket_o[2*g]),
 	.ibPacket1_o             (ibPacket_o[2*g+1])

@@ -15,6 +15,7 @@
 # 
 # AnyCore is distributed under the BSD license.
 *******************************************************************************/
+`include "define.tmp.h"
 
 `timescale 1ns/100ps
 
@@ -58,6 +59,10 @@ module DCache_controller(
     output [`SIZE_DATA-1:0]             dc2memStData_o,  // memory read address
     output [2:0]                        dc2memStSize_o,  // memory read address
     output reg                          dc2memStValid_o, // memory read enable
+
+    input                               mem2dcInv_i,     // dcache invalidation
+    input  [`DCACHE_INDEX_BITS-1:0]     mem2dcInvInd_i,  // dcache invalidation index
+    input  [0:0]                        mem2dcInvWay_i,  // dcache invalidation way (unused)
 
     output                              stbEmpty_o,      // Signals that there are no pending stores to be written to next level
 
@@ -144,6 +149,7 @@ module DCache_controller(
   logic [`DCACHE_OFFSET_BITS-1:0]    st_offset_reg;
   logic [`DCACHE_INDEX_BITS-1:0]     st_index_reg;
   logic [`DCACHE_TAG_BITS-1:0]       st_tag_reg;
+  logic [`DCACHE_ST_ADDR_BITS-1:0]   st_addr_reg;
   logic                              stEn_reg;
   logic                              stEn_reg_d1;
   logic [`SIZE_DATA_BYTE-1:0]        stByteEn;
@@ -450,7 +456,7 @@ module DCache_controller(
   			stByteEn   = 8'h1 << stAddr_i[2:0];
 
   			piton_stData = {8{stData_i[7:0]}};
-            piton_stSize = {1'b0, `LDST_BYTE};
+            piton_stSize = `MSG_DATA_SIZE_1B;
   		end
   
   		`LDST_HALF_WORD:
@@ -459,7 +465,7 @@ module DCache_controller(
   			stByteEn   = 8'h3 << {stAddr_i[2:1], 1'h0};
 
   			piton_stData = {4{stData_i[15:0]}};
-            piton_stSize = {1'b0, `LDST_HALF_WORD};
+            piton_stSize = `MSG_DATA_SIZE_2B;
   		end
   
   		`LDST_WORD:
@@ -468,7 +474,7 @@ module DCache_controller(
   			stByteEn   = stAddr_i[2] ? 8'hF0 : 8'h0F;
 
   			piton_stData = {2{stData_i[31:0]}};
-            piton_stSize = {1'b0, `LDST_WORD};
+            piton_stSize = `MSG_DATA_SIZE_4B;
   		end
   		
   		`LDST_DOUBLE_WORD:
@@ -477,7 +483,7 @@ module DCache_controller(
 		  	stByteEn   = 8'hFF;
 
   			piton_stData = stData_i;
-            piton_stSize = {1'b0, `LDST_DOUBLE_WORD};
+            piton_stSize = `MSG_DATA_SIZE_8B;
 		  end
   	endcase
   end
@@ -488,6 +494,7 @@ module DCache_controller(
     st_tag_reg              <= st_tag;
     st_index_reg            <= st_index;
     st_offset_reg           <= st_offset;
+    st_addr_reg             <= stAddr_i;
     stData_reg              <= stData;
     stEn_reg                <= stEn_i;
     stEn_reg_d1             <= stEn_i;
@@ -508,7 +515,7 @@ module DCache_controller(
 
   assign  stMiss_o = ~stHit & mem2dcStComplete_d1;
   
-  assign dc2memStAddr_o        = {st_tag_reg, st_index_reg, st_offset_reg};
+  assign dc2memStAddr_o        = st_addr_reg;
   assign dc2memStData_o        = piton_stData_reg;
   assign dc2memStSize_o        = piton_stSize_reg;
   assign dc2memStValid_o       = stEn_reg & (~dcScratchModeEn_d1);
@@ -729,17 +736,19 @@ module DCache_controller(
       for(i = 0; i < `DCACHE_NUM_LINES;i++)
         valid_array[i] <= 1'b0;
     end
-    else
-      if(dcFlush_i)
-      begin
-        for(i = 0; i < `DCACHE_NUM_LINES;i++)
+    else if(dcFlush_i)
+    begin
+      for(i = 0; i < `DCACHE_NUM_LINES;i++)
           valid_array[i] <= 1'b0;
-      end
-      else
-      begin
-        if(fillValid)
-          valid_array[fillIndex] <= 1'b1;
-      end
+    end
+    else if(mem2dcInv_i)
+    begin
+      valid_array[mem2dcInvInd_i] <= 1'b0;
+    end
+    else if(fillValid)
+    begin
+      valid_array[fillIndex] <= 1'b1;
+    end
   end
 
   always_ff @(posedge clk)

@@ -58,14 +58,17 @@ module Core_OOO(
   input  [`ICACHE_INDEX_BITS-1:0]     mem2icIndex_i,        // index of the incoming data
   input  [`ICACHE_BITS_IN_LINE-1:0]   mem2icData_i,         // requested data
   input                               mem2icRespValid_i,    // requested data is ready
+
+  input                               mem2icInv_i,          // icache invalidation
+  input  [`ICACHE_INDEX_BITS-1:0]     mem2icInvInd_i,       // icache invalidation index
+  input  [0:0]                        mem2icInvWay_i,       // icache invalidation way (unused)
+
   //input                               instCacheBypass_i,
   input                               icScratchModeEn_i,    // Should ideally be disabled by default
   input [`ICACHE_INDEX_BITS+`ICACHE_BYTES_IN_LINE_LOG-1:0]  icScratchWrAddr_i,
   input                               icScratchWrEn_i,
   input [7:0]                         icScratchWrData_i,
   output [7:0]                        icScratchRdData_o,
-  input                               icFlush_i,
-  output                              icFlushDone_o,
 `endif  
 
 `ifdef DATA_CACHE
@@ -88,9 +91,19 @@ module Core_OOO(
   output [2:0]                        dc2memStSize_o,  // memory read address
   output reg                          dc2memStValid_o, // memory read enable
 
+  input                               mem2dcInv_i,     // dcache invalidation
+  input  [`DCACHE_INDEX_BITS-1:0]     mem2dcInvInd_i,  // dcache invalidation index
+  input  [0:0]                        mem2dcInvWay_i,  // dcache invalidation way (unused)
+
   // memory-to-cache interface for stores
   input                               mem2dcStComplete_i,
   input                               mem2dcStStall_i,
+
+  input  [1:0]                        irq_i,      // level sensitive IR lines, mip & sip (async)
+  input                               ipi_i,      // software interrupt (a.k.a inter-process-interrupt)
+  input                               time_irq_i, // Timer interrupts
+
+  input [`CSR_WIDTH-1:0]              hartId_i, // hart id for multicore environment
 
   input [`DCACHE_INDEX_BITS+`DCACHE_BYTES_IN_LINE_LOG-1:0]  dcScratchWrAddr_i,
   input                               dcScratchWrEn_i,
@@ -270,6 +283,7 @@ payloadPkt                        rrPacket_l1   [0:`ISSUE_WIDTH-1];
 // wires from execute module
 memPkt                            memPacket;
 logic  [`ISSUE_WIDTH-1:0]         toggleFlag;
+logic                             icFlush;
 
 //Changes: Mohit (Floating-point exception_flags sent between fp-unit and Activelist)
 fpexcptPkt                        fpExcptPacket;
@@ -345,10 +359,11 @@ reg                               csrViolateFlag;
 reg                               interruptPending;
 reg  [`SIZE_PC-1:0]               csr_epc;
 reg  [`SIZE_PC-1:0]               csr_evec;
-reg  [`CSR_WIDTH-1:0]        	  csr_status;		//Changes: Mohit (Checks FP_DISABLED status)
 reg  [`CSR_WIDTH-1:0]        	  csr_frm;		//Changes: Mohit (Used in FP-unit for dynamic rounding mode)
 reg  [`CSR_WIDTH-1:0]        	  csr_fflags;		//Changes: Mohit (Updated at retire in SupRegFile based on fp_exception)
 reg                               sretFlag;
+reg                               mretFlag;
+riscv_structs::privilege_t        priv_lvl;
 
 bypassPkt                         bypassPacket [0:`ISSUE_WIDTH-1];
 bypassPkt                         bypassPacket_a1 [0:`ISSUE_WIDTH-1];
@@ -490,6 +505,11 @@ FetchStage1 fs1(
   .mem2icIndex_i        (mem2icIndex_i       ),        // index of the incoming data
   .mem2icData_i         (mem2icData_i        ),         // requested data
   .mem2icRespValid_i    (mem2icRespValid_i   ),    // requested data is ready
+
+  .mem2icInv_i          (mem2icInv_i),
+  .mem2icInvInd_i       (mem2icInvInd_i),
+  .mem2icInvWay_i       (mem2icInvWay_i),
+
   //.instCacheBypass_i    (instCacheBypass_i ),
   .icScratchModeEn_i    (icScratchModeEn_i),
 
@@ -497,6 +517,9 @@ FetchStage1 fs1(
   .icScratchWrEn_i      (icScratchWrEn_i  ),
   .icScratchWrData_i    (icScratchWrData_i),
   .icScratchRdData_o    (icScratchRdData_o),
+
+  .icFlush_i            (icFlush          ),
+  .icFlushDone_o        (                 ),
 `endif  
 
 `ifdef PERF_MON
@@ -734,6 +757,8 @@ Decode decode (
 
 	.decPacket_i          (decPacket_l1),
 
+    .priv_lvl_i           (priv_lvl),
+
 	.ibPacket_o           (ibPacket),
 
 	.decodeReady_o        (decodeReady)
@@ -786,8 +811,6 @@ InstructionBuffer instBuf (
 	.decodeReady_i        (decodeReady),
 
 	.ibPacket_i           (ibPacket),
-
-	.csr_status_i	      (csr_status),	//Changes: Mohit (Check if FP_DISABLED and raise exception)
 
 	.instBufferFull_o     (instBufferFull),
 	.instBufferReady_o    (instBufferReady),
@@ -1122,18 +1145,24 @@ SupRegFile supregisterfile (
   .stCommitAddr_i       (stCommitAddr),
   .ldCommitAddr_i       (ldCommitAddr),
   .sretFlag_i           (sretFlag),
+  .mretFlag_i           (mretFlag),
 
   .csr_fflags_i		(csr_fflags),		//Changes: Mohit (Update CSR_FFLAGS at retire)
+
+  .irq_i              ( irq_i ),
+  .ipi_i              ( ipi_i ),
+  .time_irq_i         ( time_irq_i ),
+
+  .hartId_i                     , // constant
+  .startPC_i            (startPC_i),
 
   .atomicRdVioFlag_o    (csrViolateFlag),
   .interruptPending_o   (interruptPending),
   .csr_epc_o            (csr_epc),
   .csr_evec_o           (csr_evec),
 
-
-  .csr_status_o		(csr_status),		//Changes: Mohit (Check for FP_DISABLED)
-  .csr_frm_o		(csr_frm)		//Changes: Mohit (Pass-through to FP-ALU for dynamic rounding mode)
-
+  .csr_frm_o		(csr_frm),		//Changes: Mohit (Pass-through to FP-ALU for dynamic rounding mode)
+  .priv_lvl_o       (priv_lvl)
 );
 
 /************************************************************************************
@@ -1228,8 +1257,9 @@ ExecutionPipe_Ctrl
 	.csrRdData_i          (csrRdData),
   .csrWrData_o          (csrWrData),
   .csrWrAddr_o          (csrWrAddr),
-  .csrWrEn_o            (csrWrEn)
+    .csrWrEn_o            (csrWrEn),
 
+    .icFlush_o            ()
 );
 
 
@@ -1590,6 +1620,10 @@ LSU lsu (
   .dc2memStSize_o       (dc2memStSize_o     ), // memory read address
   .dc2memStValid_o      (dc2memStValid_o    ), // memory read enable
                                            
+  .mem2dcInv_i,     // dcache invalidation
+  .mem2dcInvInd_i,  // dcache invalidation index
+  .mem2dcInvWay_i,  // dcache invalidation way (unusedndex
+
   .mem2dcStComplete_i   (mem2dcStComplete_i ),
   .mem2dcStStall_i      (mem2dcStStall_i    ),
 
@@ -1703,6 +1737,7 @@ ActiveList activeList(
   .csr_epc_i            (csr_epc),
   .csr_evec_i           (csr_evec),
   .sretFlag_o           (sretFlag),
+  .mretFlag_o           (mretFlag),
 
 	.activeListCnt_o      (activeListCnt),
 
@@ -1729,7 +1764,8 @@ ActiveList activeList(
 
 	.loadViolation_o      (loadViolation),
   	.alRamReady_o         (alRamReady),
-        .csr_fflags_o         (csr_fflags)	//Changes: Mohit (Update CSR_FFLAGS at retire)
+    .csr_fflags_o         (csr_fflags),	//Changes: Mohit (Update CSR_FFLAGS at retire)
+    .icFlush_o            (icFlush)
 	);
 
 

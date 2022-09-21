@@ -65,7 +65,7 @@ module ExecutionPipe_Ctrl (
 	output                               csrRdEn_o,
   output [`CSR_WIDTH-1:0]         csrWrData_o,
   output [`CSR_WIDTH_LOG-1:0]           csrWrAddr_o,
-  output                               csrWrEn_o
+  	output                               csrWrEn_o,
 	);
 
 
@@ -131,7 +131,7 @@ Execute_Ctrl execute (
 	.exePacket_i                        (exePacket_l1),
 	.wbPacket_o                         (wbPacket),
 
-	.bypassPacket_i                     (bypassPacket_i)
+	.bypassPacket_i                     (bypassPacket_i),
 );
 
 
