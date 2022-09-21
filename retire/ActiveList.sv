@@ -59,6 +59,10 @@
    9. Exception is handled at the head of the ActiveList. On an exception, AMT
       is copied into RMT.
 
+   // Changes: bgergely0
+   10. fence.i is handled similarly to a branch misprediction in the ActiveList.
+     The icFlush_o signal invalidates the L1ICache.
+
 
 ****************************************************************************/
 //`ifdef GATE_SIM
@@ -1398,7 +1402,6 @@ begin
 		  if (fenceFlag[0] & ~stallStCommit_i)
 		  begin
 		  	fenceFlag_reg       <= 1'b1;
-		  	//recoverPC           <= dataAl[0].pc + 4;
 			// targetAddr is pc_p4 from Ctrl ALU
 		  	recoverPC           <= targetAddr;
 		  end

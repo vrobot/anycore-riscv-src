@@ -66,7 +66,6 @@ module ExecutionPipe_Ctrl (
   output [`CSR_WIDTH-1:0]         csrWrData_o,
   output [`CSR_WIDTH_LOG-1:0]           csrWrAddr_o,
   	output                               csrWrEn_o,
-	output                               icFlush_o // FENCE.I flushes the L1 instruction cache
 	);
 
 
@@ -133,7 +132,6 @@ Execute_Ctrl execute (
 	.wbPacket_o                         (wbPacket),
 
 	.bypassPacket_i                     (bypassPacket_i),
-	.icFlush_o                          (icFlush_o)
 );
 
 

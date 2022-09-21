@@ -45,8 +45,6 @@ module Ctrl_ALU (
     output [`SIZE_PC-1:0]          nextPC_o,
     output                         direction_o,
     output exeFlgs                 flags_o,
-    // unused, icFlush is from the ActiveList
-    output reg                     icFlush_o // FENCE.I needs to flush the L1 instruction cache
     );
 
 
@@ -106,7 +104,6 @@ begin:ALU_OPERATION
     csrWrData = 0; 
     csrWrAddr = 0; 
     csrWrEn   = 1'h0; 
-    icFlush_o = 1'b0;
 
     case(opcode)
 
@@ -352,7 +349,6 @@ begin:ALU_OPERATION
                `FN3_FENCEI:
                begin
           nextPC                  = pc_p4;
-          icFlush_o               = 1'b1;
           flags.destValid         = destValid_i;
         end
                default:;
