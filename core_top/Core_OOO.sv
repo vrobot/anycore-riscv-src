@@ -1257,9 +1257,7 @@ ExecutionPipe_Ctrl
 	.csrRdData_i          (csrRdData),
   .csrWrData_o          (csrWrData),
   .csrWrAddr_o          (csrWrAddr),
-    .csrWrEn_o            (csrWrEn),
-
-    .icFlush_o            ()
+    .csrWrEn_o            (csrWrEn)
 );
 
 
