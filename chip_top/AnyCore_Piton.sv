@@ -42,52 +42,100 @@ module AnyCore_Piton(
   input                            reconfigureCore_i,
 `endif
 
-  output [`ICACHE_BLOCK_ADDR_BITS-1:0] ic2memReqAddr_o, // memory read address
-  output                             ic2memReqValid_o,  // memory read enable
-  input [`ICACHE_TAG_BITS-1:0]      mem2icTag_i,        // tag of the incoming data
-  input [`ICACHE_INDEX_BITS-1:0]    mem2icIndex_i,      // index of the incoming data
-  input [`ICACHE_BITS_IN_LINE-1:0]  mem2icData_i,       // requested data
-  input                             mem2icRespValid_i,  // requested data is ready
-
-  input                             mem2icInv_i,        // icache invalidation
-  input  [`ICACHE_INDEX_BITS-1:0]   mem2icInvInd_i,     // icache invalidation index
-  input  [0:0]                      mem2icInvWay_i,     // icache invalidation way (unused)
-
-  // cache-to-memory interface for Loads
-  output [`DCACHE_BLOCK_ADDR_BITS-1:0] dc2memLdAddr_o,  // memory read address
-  output                             dc2memLdValid_o, // memory read enable
-
-  // memory-to-cache interface for Loads
-  input [`DCACHE_TAG_BITS-1:0]     mem2dcLdTag_i,       // tag of the incoming datadetermine
-  input [`DCACHE_INDEX_BITS-1:0]   mem2dcLdIndex_i,     // index of the incoming data
-  input [`DCACHE_BITS_IN_LINE-1:0] mem2dcLdData_i,      // requested data
-  input                            mem2dcLdValid_i,     // indicates the requested data is ready
-
-  // cache-to-memory interface for stores
-  output [`DCACHE_ST_ADDR_BITS-1:0]  dc2memStAddr_o,  
-  output [`SIZE_DATA-1:0]            dc2memStData_o,
-  output [2:0]                       dc2memStSize_o,
-  output                             dc2memStValid_o,
-
-  input                               mem2dcInv_i,     // dcache invalidation
-  input  [`DCACHE_INDEX_BITS-1:0]     mem2dcInvInd_i,  // dcache invalidation index
-  input  [0:0]                        mem2dcInvWay_i,  // dcache invalidation way (unused)
-
-  input                            mem2dcStComplete_i,
-  input                            mem2dcStStall_i,
-
-  input                             anycore_int,
 
   input  [1:0]                        irq_i,      // level sensitive IR lines, mip & sip (async)
   input                               ipi_i,      // software interrupt (a.k.a inter-process-interrupt)
   input                               time_irq_i, // Timer interrupts
 
-  input        [`CSR_WIDTH-1:0]     hartId_i // hart id in multicore environment
+  input        [`CSR_WIDTH-1:0]     hartId_i, // hart id in multicore environment
 
+  // TRI inputs
+  input                                  l15_transducer_val,
+  input   [3:0]                          l15_transducer_returntype,
+  input                                  l15_transducer_l2miss,
+  input   [1:0]                          l15_transducer_error,
+  input                                  l15_transducer_noncacheable,
+  input                                  l15_transducer_atomic,
+  input   [`L15_THREADID_MASK]           l15_transducer_threadid,
+  input                                  l15_transducer_prefetch,
+  input                                  l15_transducer_f4b,
+  input   [63:0]                         l15_transducer_data_0,
+  input   [63:0]                         l15_transducer_data_1,
+  input   [63:0]                         l15_transducer_data_2,
+  input   [63:0]                         l15_transducer_data_3,
+  input                                  l15_transducer_inval_icache_all_way,
+  input                                  l15_transducer_inval_dcache_all_way,
+  input   [`L15_PADDR_MASK]              l15_transducer_address,
+  input   [15:4]                         l15_transducer_inval_address_15_4,
+  input                                  l15_transducer_cross_invalidate,
+  input   [1:0]                          l15_transducer_cross_invalidate_way,
+  input                                  l15_transducer_inval_dcache_inval,
+  input                                  l15_transducer_inval_icache_inval,
+  input   [1:0]                          l15_transducer_inval_way,
+  input                                  l15_transducer_blockinitstore,
+
+  input                                  l15_transducer_ack,
+  input                                  l15_transducer_header_ack,
+
+
+  // TRI outputs
+  output                                 transducer_l15_req_ack,
+  output  [`PCX_REQTYPE_WIDTH-1:0]       transducer_l15_rqtype,
+  output  [`L15_AMO_OP_WIDTH-1:0]        transducer_l15_amo_op,
+
+  output                                 transducer_l15_nc,
+  output  [`PCX_SIZE_FIELD_WIDTH-1:0]    transducer_l15_size,
+  output  [`L15_THREADID_MASK]           transducer_l15_threadid,
+  output                                 transducer_l15_prefetch,
+  output                                 transducer_l15_invalidate_cacheline,
+  output                                 transducer_l15_blockstore,
+  output                                 transducer_l15_blockinitstore,
+  output  [1:0]                          transducer_l15_l1rplway,
+  output                                 transducer_l15_val,
+  output  [`L15_PADDR_HI:0]              transducer_l15_address,
+  output  [32:0]                         transducer_l15_csm_data,
+  output  [63:0]                         transducer_l15_data,
+  output  [63:0]                         transducer_l15_data_next_entry
 	);
 
 
 /*****************************Wire Declaration**********************************/
+
+wire [`ICACHE_BLOCK_ADDR_BITS-1:0] ic2memReqAddr;    // memory read address
+wire                               ic2memReqValid;   // memory read enable
+wire [`ICACHE_TAG_BITS-1:0]        mem2icTag;        // tag of the incoming data
+wire [`ICACHE_INDEX_BITS-1:0]      mem2icIndex;      // index of the incoming data
+wire [`ICACHE_BITS_IN_LINE-1:0]    mem2icData;       // requested data
+wire                               mem2icRespValid;  // requested data is ready
+
+wire                               mem2icInv;        // icache invalidation
+wire  [`ICACHE_INDEX_BITS-1:0]     mem2icInvInd;     // icache invalidation index
+wire  [0:0]                        mem2icInvWay;     // icache invalidation way (unused)
+
+// cache-to-memory interface for Loads
+wire [`DCACHE_BLOCK_ADDR_BITS-1:0] dc2memLdAddr;  // memory read address
+wire                               dc2memLdValid; // memory read enable
+
+// memory-to-cache interface for Loads
+wire [`DCACHE_TAG_BITS-1:0]     mem2dcLdTag;       // tag of the incoming datadetermine
+wire [`DCACHE_INDEX_BITS-1:0]   mem2dcLdIndex;     // index of the incoming data
+wire [`DCACHE_BITS_IN_LINE-1:0] mem2dcLdData;      // requested data
+wire                            mem2dcLdValid;     // indicates the requested data is ready
+
+// cache-to-memory interface for stores
+wire [`DCACHE_ST_ADDR_BITS-1:0]  dc2memStAddr;
+wire [`SIZE_DATA-1:0]            dc2memStData;
+wire [2:0]                       dc2memStSize;
+wire                             dc2memStValid;
+
+wire                               mem2dcInv;     // dcache invalidation
+wire  [`DCACHE_INDEX_BITS-1:0]     mem2dcInvInd;  // dcache invalidation index
+wire  [0:0]                        mem2dcInvWay;  // dcache invalidation way (unused)
+
+wire                            mem2dcStComplete;
+wire                            mem2dcStStall;
+
+wire                             anycore_int;
 
 wire reset;
 reg reset_l;
@@ -331,7 +379,7 @@ Core_OOO coreTop(
     .clk                                 (coreClk),
     .reset                               (reset_sync),
     .resetFetch_i                        (resetFetch_sync),
-    .toggleFlag_o                        (toggleFlag_o),
+    .toggleFlag_o                        (),
 
     .irq_i                               ( irq_i ),
     .ipi_i                               ( ipi_i ),
@@ -386,6 +434,7 @@ Core_OOO coreTop(
     .fetchRecoverFlag_o                  (fetchRecoverFlag),
     .inst_i                              (inst),
     .instValid_i                         (instValid & ~(|cancelCurrentFetch)),
+    .instException_i                     (),
 
     .ldAddr_o                            (ldAddr),
     .ldData_i                            (ldData),
@@ -397,16 +446,16 @@ Core_OOO coreTop(
     .stEn_o                              (stEn),
 
   `ifdef INST_CACHE
-    .ic2memReqAddr_o                     (ic2memReqAddr_o  ),      // memory read address
-    .ic2memReqValid_o                    (ic2memReqValid_o ),     // memory read enable
-    .mem2icTag_i                         (mem2icTag_i      ),          // tag of the incoming data
-    .mem2icIndex_i                       (mem2icIndex_i    ),        // index of the incoming data
-    .mem2icData_i                        (mem2icData_i     ),         // requested data
-    .mem2icRespValid_i                   (mem2icRespValid_i),    // requested data is ready
+    .ic2memReqAddr_o                     (ic2memReqAddr  ),      // memory read address
+    .ic2memReqValid_o                    (ic2memReqValid ),     // memory read enable
+    .mem2icTag_i                         (mem2icTag      ),          // tag of the incoming data
+    .mem2icIndex_i                       (mem2icIndex    ),        // index of the incoming data
+    .mem2icData_i                        (mem2icData     ),         // requested data
+    .mem2icRespValid_i                   (mem2icRespValid),    // requested data is ready
 
-    .mem2icInv_i                         (mem2icInv_i),
-    .mem2icInvInd_i                      (mem2icInvInd_i),
-    .mem2icInvWay_i                      (mem2icInvWay_i),
+    .mem2icInv_i                         (mem2icInv),
+    .mem2icInvInd_i                      (mem2icInvInd),
+    .mem2icInvWay_i                      (mem2icInvWay),
 
     //.instCacheBypass_i                   (instCacheBypass  ),
     .icScratchModeEn_i                   (icScratchModeEn  ),
@@ -421,30 +470,32 @@ Core_OOO coreTop(
     .dataCacheBypass_i                   (dataCacheBypass    ),
     .dcScratchModeEn_i                   (dcScratchModeEn    ),
   
-    .dc2memLdAddr_o                      (dc2memLdAddr_o     ), // memory read address
-    .dc2memLdValid_o                     (dc2memLdValid_o    ), // memory read enable
+    .dc2memLdAddr_o                      (dc2memLdAddr     ), // memory read address
+    .dc2memLdValid_o                     (dc2memLdValid    ), // memory read enable
                                                             
-    .mem2dcLdTag_i                       (mem2dcLdTag_i      ), // tag of the incoming datadetermine
-    .mem2dcLdIndex_i                     (mem2dcLdIndex_i    ), // index of the incoming data
-    .mem2dcLdData_i                      (mem2dcLdData_i     ), // requested data
-    .mem2dcLdValid_i                     (mem2dcLdValid_i    ), // indicates the requested data is ready
+    .mem2dcLdTag_i                       (mem2dcLdTag      ), // tag of the incoming datadetermine
+    .mem2dcLdIndex_i                     (mem2dcLdIndex    ), // index of the incoming data
+    .mem2dcLdData_i                      (mem2dcLdData     ), // requested data
+    .mem2dcLdValid_i                     (mem2dcLdValid    ), // indicates the requested data is ready
                                                             
-    .dc2memStAddr_o                      (dc2memStAddr_o     ), // memory read address
-    .dc2memStData_o                      (dc2memStData_o     ), // memory read address
-    .dc2memStSize_o                      (dc2memStSize_o     ), // memory read address
-    .dc2memStValid_o                     (dc2memStValid_o    ), // memory read enable
+    .dc2memStAddr_o                      (dc2memStAddr     ), // memory read address
+    .dc2memStData_o                      (dc2memStData     ), // memory read address
+    .dc2memStSize_o                      (dc2memStSize     ), // memory read address
+    .dc2memStValid_o                     (dc2memStValid    ), // memory read enable
                                                             
-    .mem2dcInv_i,     // dcache invalidation
-    .mem2dcInvInd_i,  // dcache invalidation index
-    .mem2dcInvWay_i,  // dcache invalidation way (unusedndex
+    .mem2dcInv_i                         (mem2dcInv        ),     // dcache invalidation
+    .mem2dcInvInd_i                      (mem2dcInvInd     ),  // dcache invalidation index
+    .mem2dcInvWay_i                      (mem2dcInvWay     ),  // dcache invalidation way (unusedndex
 
-    .mem2dcStComplete_i                  (mem2dcStComplete_i ),
-    .mem2dcStStall_i                     (mem2dcStStall_i    ),
+    .mem2dcStComplete_i                  (mem2dcStComplete ),
+    .mem2dcStStall_i                     (mem2dcStStall    ),
 
     .dcScratchWrAddr_i                   (dcScratchWrAddr    ),
     .dcScratchWrEn_i                     (dcScratchWrEn      ),
     .dcScratchWrData_i                   (dcScratchWrData    ),
     .dcScratchRdData_o                   (dcScratchRdData    ),
+    .dcFlush_i                           (),
+    .dcFlushDone_o                       (),
   `endif    
 
     /* Initialize the PRF from top */
@@ -535,8 +586,89 @@ Core_OOO coreTop(
 //`endif
 
 
-//ccx_to_cache_bridge
-//
-//cache_to_ccx_bridge
+    // not supported at the moment
+    assign transducer_l15_amo_op = `L15_AMO_OP_NONE;
+    anycore_tri_transducer tri_transducer(
+        .clk                               (clk),
+        .rst_n                             (rst_n),
+
+        .l15_transducer_ack_i              (l15_transducer_ack),
+        .l15_transducer_header_ack_i       (l15_transducer_header_ack),
+
+        .ic2mem_reqaddr_i                  (ic2memReqAddr),
+        .ic2mem_reqvalid_i                 (ic2memReqValid),
+
+        .dc2mem_ldaddr_i                   (dc2memLdAddr),
+        .dc2mem_ldvalid_i                  (dc2memLdValid),
+
+        .dc2mem_staddr_i                   (dc2memStAddr),
+        .dc2mem_stdata_i                   (dc2memStData),
+        .dc2mem_stsize_i                   (dc2memStSize),
+        .dc2mem_stvalid_i                  (dc2memStValid),
+
+        .transducer_l15_rqtype_o               (transducer_l15_rqtype),
+        .transducer_l15_nc_o                   (transducer_l15_nc),
+        .transducer_l15_size_o                 (transducer_l15_size),
+        .transducer_l15_threadid_o             (transducer_l15_threadid),
+        .transducer_l15_prefetch_o             (transducer_l15_prefetch),
+        .transducer_l15_blockstore_o           (transducer_l15_blockstore),
+        .transducer_l15_blockinitstore_o       (transducer_l15_blockinitstore),
+        .transducer_l15_l1rplway_o             (transducer_l15_l1rplway),
+        .transducer_l15_val_o                  (transducer_l15_val),
+        .transducer_l15_invalidate_cacheline_o (transducer_l15_invalidate_cacheline),
+        .transducer_l15_address_o              (transducer_l15_address),
+        .transducer_l15_csm_data_o             (transducer_l15_csm_data),
+        .transducer_l15_data_o                 (transducer_l15_data),
+        .transducer_l15_data_next_entry_o      (transducer_l15_data_next_entry),
+
+        .l15_transducer_val_i                   (l15_transducer_val),
+        .l15_transducer_returntype_i            (l15_transducer_returntype),
+        .l15_transducer_l2miss_i                (l15_transducer_l2miss),
+        .l15_transducer_error_i                 (l15_transducer_error),
+        .l15_transducer_noncacheable_i          (l15_transducer_noncacheable),
+        .l15_transducer_atomic_i                (l15_transducer_atomic),
+        .l15_transducer_threadid_i              (l15_transducer_threadid),
+        .l15_transducer_prefetch_i              (l15_transducer_prefetch),
+        .l15_transducer_f4b_i                   (l15_transducer_f4b),
+        .l15_transducer_data_0_i                (l15_transducer_data_0),
+        .l15_transducer_data_1_i                (l15_transducer_data_1),
+        .l15_transducer_data_2_i                (l15_transducer_data_2),
+        .l15_transducer_data_3_i                (l15_transducer_data_3),
+        .l15_transducer_inval_icache_all_way_i  (l15_transducer_inval_icache_all_way),
+        .l15_transducer_inval_dcache_all_way_i  (l15_transducer_inval_dcache_all_way),
+        .l15_transducer_address_i               (l15_transducer_address),
+        .l15_transducer_inval_address_15_4_i    (l15_transducer_inval_address_15_4),
+        .l15_transducer_cross_invalidate_i      (l15_transducer_cross_invalidate),
+        .l15_transducer_cross_invalidate_way_i  (l15_transducer_cross_invalidate_way),
+        .l15_transducer_inval_dcache_inval_i    (l15_transducer_inval_dcache_inval),
+        .l15_transducer_inval_icache_inval_i    (l15_transducer_inval_icache_inval),
+        .l15_transducer_inval_way_i             (l15_transducer_inval_way),
+        .l15_transducer_blockinitstore_i        (l15_transducer_blockinitstore),
+
+        .transducer_l15_req_ack_o               (transducer_l15_req_ack),
+
+        .mem2ic_tag_o                     (mem2icTag),
+        .mem2ic_index_o                   (mem2icIndex),
+        .mem2ic_data_o                    (mem2icData),
+        .mem2ic_respvalid_o               (mem2icRespValid),
+
+        .mem2ic_invvalid_o                (mem2icInv),
+        .mem2ic_invindex_o                (mem2icInvInd),
+        .mem2ic_invway_o                  (mem2icInvWay),
+
+        .mem2dc_ldtag_o                   (mem2dcLdTag),
+        .mem2dc_ldindex_o                 (mem2dcLdIndex),
+        .mem2dc_lddata_o                  (mem2dcLdData),
+        .mem2dc_ldvalid_o                 (mem2dcLdValid),
+
+        .mem2dc_invvalid_o                (mem2dcInv),
+        .mem2dc_invindex_o                (mem2dcInvInd),
+        .mem2dc_invway_o                  (mem2dcInvWay),
+
+        .mem2dc_stcomplete_o              (mem2dcStComplete),
+        .mem2dc_ststall_o                 (mem2dcStStall),
+
+        .anycore_int_o                    (anycore_int)
+    );
 
 endmodule

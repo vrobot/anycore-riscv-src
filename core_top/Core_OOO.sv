@@ -818,7 +818,8 @@ InstructionBuffer instBuf (
 	.instCount_o          (instBuffCount),
 `endif
 
-	.renPacket_o          (renPacket)
+	.renPacket_o          (renPacket),
+    .stallForCsr_o        ()
 	);
 
 

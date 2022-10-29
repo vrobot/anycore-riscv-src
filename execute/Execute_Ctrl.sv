@@ -74,7 +74,7 @@ module Execute_Ctrl (
 	output wbPkt                         wbPacket_o,
 
 	/* all the bypasses coming from the different pipes */
-	input  bypassPkt                     bypassPacket_i [0:`ISSUE_WIDTH-1],
+	input  bypassPkt                     bypassPacket_i [0:`ISSUE_WIDTH-1]
 	);
 
 
