@@ -1377,6 +1377,20 @@ begin
 
 	else
 	begin
+    // Changes: bgergely0
+    // exceptionFlag[0] check is moved before the *_reg checks,
+    // because exceptionFlag_reg and exceptionFlag[0] can both be true
+    // at the same time, and in this case we want to set
+    // values according to the exception case
+    if (exceptionFlag[0] & ~stallStCommit_i)
+    begin
+    	exceptionFlag_reg   <= 1'b1;
+    	//exceptionPC         <= dataAl[0].pc + `SIZE_INSTRUCTION_BYTE;
+    	exceptionPC         <= dataAl[0].pc; // Should report the PC that faulted
+    	recoverPC           <= csr_evec_i;
+      exceptionCause      <= exceptionAl[0].exceptionCause;
+    end
+    else begin
 	  if (violateFlag_reg | mispredFlag_reg | exceptionFlag_reg | fenceFlag_reg)
     begin
 		  violateFlag_reg       <= 1'b0;
@@ -1432,16 +1446,7 @@ begin
 		  	violateFlag_reg     <= 1'b1;
 		  	recoverPC           <= csr_evec_i;
       end
-
-		  if (exceptionFlag[0] & ~stallStCommit_i)
-		  begin
-		  	exceptionFlag_reg   <= 1'b1;
-		  	//exceptionPC         <= dataAl[0].pc + `SIZE_INSTRUCTION_BYTE;
-		  	exceptionPC         <= dataAl[0].pc; // Should report the PC that faulted
-		  	recoverPC           <= csr_evec_i;
-        exceptionCause      <= exceptionAl[0].exceptionCause;
 		  end
-
     end
 	end
 end
