@@ -378,11 +378,11 @@ end
 
 
 // Interrupt bits in MIP
-always_comb begin
-  csr_mip[`IRQ_M_EXT]   = irq_i[0];    // external irq pending
-  csr_mip[`IRQ_M_SOFT]  = ipi_i;       // software irq
-  csr_mip[`IRQ_M_TIMER] = time_irq_i;  // external timer irq
-end
+//always_comb begin
+//  csr_mip[`IRQ_M_EXT]   = irq_i[0];    // external irq pending
+//  csr_mip[`IRQ_M_SOFT]  = ipi_i;       // software irq
+//  csr_mip[`IRQ_M_TIMER] = time_irq_i;  // external timer irq
+//end
 
 
 // totalCommit_i is the number of instructions commiting each cycle

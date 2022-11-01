@@ -7,6 +7,7 @@ configs/CommonConfig.h
 configs/RAM_Params.h
 include/structs.sv
 chip_top/AnyCore_Piton.sv
+chip_top/anycore_tri_transducer.v
 core_top/PerfMon.sv
 core_top/PowerManager.sv
 core_top/RegisterConsolidate.sv

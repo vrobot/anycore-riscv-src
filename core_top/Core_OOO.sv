@@ -818,7 +818,8 @@ InstructionBuffer instBuf (
 	.instCount_o          (instBuffCount),
 `endif
 
-	.renPacket_o          (renPacket)
+	.renPacket_o          (renPacket),
+    .stallForCsr_o        ()
 	);
 
 
@@ -1257,9 +1258,7 @@ ExecutionPipe_Ctrl
 	.csrRdData_i          (csrRdData),
   .csrWrData_o          (csrWrData),
   .csrWrAddr_o          (csrWrAddr),
-    .csrWrEn_o            (csrWrEn),
-
-    .icFlush_o            ()
+    .csrWrEn_o            (csrWrEn)
 );
 
 

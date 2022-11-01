@@ -46,8 +46,6 @@ module InstructionBuffer(
 
 	input  renPkt                         ibPacket_i [0:2*`FETCH_WIDTH-1],
     
-	input  [`CSR_WIDTH-1:0]               csr_status_i,	//Changes: Mohit
-
 	/* instBufferFull_o is the signal for FetchStage1 and FetchStage2 if
 	* the instBuffer doesn't have enough space to store 4 (Fetch Bandwidth)
 	* instructions.
