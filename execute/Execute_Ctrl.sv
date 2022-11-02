@@ -136,7 +136,7 @@ Ctrl_ALU ctrlAlu(
   .csrWrEn_o                          (csrWrEn),
 	.nextPC_o                           (nextPC),
 	.direction_o                        (computedDir),
-	.flags_o                            (flags),
+	.flags_o                            (flags)
 	);
 
 
