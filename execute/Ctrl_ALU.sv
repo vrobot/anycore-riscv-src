@@ -44,7 +44,7 @@ module Ctrl_ALU (
     output                         csrWrEn_o,
     output [`SIZE_PC-1:0]          nextPC_o,
     output                         direction_o,
-    output exeFlgs                 flags_o,
+    output exeFlgs                 flags_o
     );
 
 
