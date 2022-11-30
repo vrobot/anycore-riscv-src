@@ -421,12 +421,12 @@ end
 assign mem2dc_invvalid_o = signal_dcache_inval & ~dinvalrst_reg;
 assign mem2ic_invvalid_o = signal_icache_inval & ~iinvalrst_reg;
 //CHANGES
-//assign mem2dc_invway_o = l15_transducer_inval_way_i;
-assign mem2dc_invway_o = ic2memReqWay_o;
+assign mem2dc_invway_o = l15_transducer_inval_way_i;
+//assign mem2dc_invway_o = ic2memReqWay_o;
 //assign mem2dc_invway_o = mem2icInvWay_i;
 assign mem2dc_invindex_o = l15_transducer_inval_address_15_4_i[`DCACHE_INDEX_BITS+4-1:4];
-//assign mem2ic_invway_o = l15_transducer_inval_way_i;
-assign mem2ic_invway_o = ic2memReqWay_o;
+assign mem2ic_invway_o = l15_transducer_inval_way_i;
+//assign mem2ic_invway_o = ic2memReqWay_o;
 //assign mem2ic_invway_o = mem2icInvWay_i;
 assign mem2ic_invindex_o = l15_transducer_inval_address_15_4_i[`DCACHE_INDEX_BITS+4-1:4];
 
