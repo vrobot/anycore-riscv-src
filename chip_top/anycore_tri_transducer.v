@@ -8,6 +8,9 @@ module anycore_tri_transducer(
     input l15_transducer_ack_i,
     input l15_transducer_header_ack_i,
 
+    //CHANGES
+    input [1:0] mem2icInvWay_i,
+
     input [`ICACHE_BLOCK_ADDR_BITS-1:0] ic2mem_reqaddr_i,
     input                               ic2mem_reqvalid_i,
 
@@ -16,6 +19,9 @@ module anycore_tri_transducer(
     input [`DCACHE_ST_ADDR_BITS-1:0]    dc2mem_staddr_i,
     input [`SIZE_DATA-1:0]              dc2mem_stdata_i,
     input [2:0]                         dc2mem_stsize_i,
+
+    //CHANGES
+    output [1:0]  ic2memReqWay_o,
 
     // outputs anycore uses
     output reg  [4:0]  transducer_l15_rqtype_o,
@@ -58,6 +64,7 @@ module anycore_tri_transducer(
     input wire [1:0]    l15_transducer_cross_invalidate_way_i,
     input wire          l15_transducer_inval_dcache_inval_i,
     input wire          l15_transducer_inval_icache_inval_i,
+    //said something about this wire
     input wire [1:0]    l15_transducer_inval_way_i,
     input wire          l15_transducer_blockinitstore_i,
 
@@ -98,7 +105,9 @@ reg header_ack_seen_reg;
 // Get full address that's 64 bits long since it's otherwise to icache
 // block alignment
 wire [63:0] anycore_imiss_full_addr = ic2mem_reqaddr_i << (64-`ICACHE_BLOCK_ADDR_BITS);
-wire [1:0] anycore_imiss_way = ic2mem_reqaddr_i[`ICACHE_INDEX_BITS-1:`ICACHE_INDEX_BITS-2-1];
+//CHANGES
+//wire [1:0] anycore_imiss_way = ic2mem_reqaddr_i[`ICACHE_INDEX_BITS-1:`ICACHE_INDEX_BITS-2-1];
+wire [1:0] anycore_imiss_way = ic2memReqWay_o;
 // Sign extend to 64 bits
 //wire [63:0] anycore_store_full_addr = {{((64-`DCACHE_ST_ADDR_BITS)-3){dc2mem_staddr_i[`DCACHE_ST_ADDR_BITS-1]}}, (dc2mem_staddr_i << 3)};
 wire [63:0] anycore_store_full_addr = {{((64-`DCACHE_ST_ADDR_BITS)-3){dc2mem_staddr_i[`DCACHE_ST_ADDR_BITS-1]}}, (dc2mem_staddr_i)};
@@ -411,9 +420,14 @@ end
 
 assign mem2dc_invvalid_o = signal_dcache_inval & ~dinvalrst_reg;
 assign mem2ic_invvalid_o = signal_icache_inval & ~iinvalrst_reg;
-assign mem2dc_invway_o = l15_transducer_inval_way_i;
+//CHANGES
+//assign mem2dc_invway_o = l15_transducer_inval_way_i;
+assign mem2dc_invway_o = ic2memReqWay_o;
+//assign mem2dc_invway_o = mem2icInvWay_i;
 assign mem2dc_invindex_o = l15_transducer_inval_address_15_4_i[`DCACHE_INDEX_BITS+4-1:4];
-assign mem2ic_invway_o = l15_transducer_inval_way_i;
+//assign mem2ic_invway_o = l15_transducer_inval_way_i;
+assign mem2ic_invway_o = ic2memReqWay_o;
+//assign mem2ic_invway_o = mem2icInvWay_i;
 assign mem2ic_invindex_o = l15_transducer_inval_address_15_4_i[`DCACHE_INDEX_BITS+4-1:4];
 
 always @ * begin

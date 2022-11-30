@@ -110,7 +110,7 @@ wire                               mem2icRespValid;  // requested data is ready
 
 wire                               mem2icInv;        // icache invalidation
 wire  [`ICACHE_INDEX_BITS-1:0]     mem2icInvInd;     // icache invalidation index
-wire  [0:0]                        mem2icInvWay;     // icache invalidation way (unused)
+wire  [1:0]                        mem2icInvWay;     // icache invalidation way (unused)
 
 // cache-to-memory interface for Loads
 wire [`DCACHE_BLOCK_ADDR_BITS-1:0] dc2memLdAddr;  // memory read address
@@ -448,6 +448,7 @@ Core_OOO coreTop(
   `ifdef INST_CACHE
     .ic2memReqAddr_o                     (ic2memReqAddr  ),      // memory read address
     .ic2memReqValid_o                    (ic2memReqValid ),     // memory read enable
+    .ic2memReqWay_o                      (ic2memReqWay),
     .mem2icTag_i                         (mem2icTag      ),          // tag of the incoming data
     .mem2icIndex_i                       (mem2icIndex    ),        // index of the incoming data
     .mem2icData_i                        (mem2icData     ),         // requested data
