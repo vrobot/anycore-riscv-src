@@ -629,28 +629,30 @@ module ICache_controller#(
     begin
       int i;
         for(i = 0; i < `ICACHE_NUM_LINES;i++)
+        begin
           valid_array[i]  <= 1'b0;
           valid_array1[i] <= 1'b0;
           valid_array2[i] <= 1'b0;
           valid_array3[i] <= 1'b0;
+        end
     end
     else if(mem2icInv_i)
     begin
       if (mem2icInvWay_i == 2'b00)
       begin
-        valid_array[mem2icInvInd_i] <= 1'b0;
+        valid_array[fillIndex] <= 1'b0;
       end
       else if (mem2icInvWay_i == 2'b01)
       begin
-        valid_array1[mem2icInvInd_i] <= 1'b0;
+        valid_array1[fillIndex] <= 1'b0;
       end
       else if (mem2icInvWay_i == 2'b10)
       begin
-        valid_array2[mem2icInvInd_i] <= 1'b0;
+        valid_array2[fillIndex] <= 1'b0;
       end
       else if (mem2icInvWay_i == 2'b11)
       begin
-        valid_array3[mem2icInvInd_i] <= 1'b0;
+        valid_array3[fillIndex] <= 1'b0;
       end
     end
     else if(fillValid)
