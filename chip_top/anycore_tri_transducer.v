@@ -8,20 +8,15 @@ module anycore_tri_transducer(
     input l15_transducer_ack_i,
     input l15_transducer_header_ack_i,
 
-    //CHANGES
-    input [1:0] mem2icInvWay_i,
-
     input [`ICACHE_BLOCK_ADDR_BITS-1:0] ic2mem_reqaddr_i,
     input                               ic2mem_reqvalid_i,
+    output [1:0]                        ic2memReqWay_o,
 
     input [`DCACHE_BLOCK_ADDR_BITS-1:0] dc2mem_ldaddr_i,
 
     input [`DCACHE_ST_ADDR_BITS-1:0]    dc2mem_staddr_i,
     input [`SIZE_DATA-1:0]              dc2mem_stdata_i,
     input [2:0]                         dc2mem_stsize_i,
-
-    //CHANGES
-    output [1:0]  ic2memReqWay_o,
 
     // outputs anycore uses
     output reg  [4:0]  transducer_l15_rqtype_o,
@@ -87,7 +82,7 @@ module anycore_tri_transducer(
 
     output                              mem2ic_invvalid_o,
     output [`ICACHE_INDEX_BITS-1:0]     mem2ic_invindex_o,
-    output [0:0]                        mem2ic_invway_o,
+    output [1:0]                        mem2ic_invway_o,
 
     input                               dc2mem_stvalid_i,
     output reg                          mem2dc_stcomplete_o,

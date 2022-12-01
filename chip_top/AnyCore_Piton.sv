@@ -103,6 +103,7 @@ module AnyCore_Piton(
 
 wire [`ICACHE_BLOCK_ADDR_BITS-1:0] ic2memReqAddr;    // memory read address
 wire                               ic2memReqValid;   // memory read enable
+wire  [1:0]                        ic2memReqWay;     // memory way 
 wire [`ICACHE_TAG_BITS-1:0]        mem2icTag;        // tag of the incoming data
 wire [`ICACHE_INDEX_BITS-1:0]      mem2icIndex;      // index of the incoming data
 wire [`ICACHE_BITS_IN_LINE-1:0]    mem2icData;       // requested data
@@ -587,6 +588,7 @@ Core_OOO coreTop(
 //`endif
 
 
+    //DO WE EVEN NEED TO ADD STUFF HERE?
     // not supported at the moment
     assign transducer_l15_amo_op = `L15_AMO_OP_NONE;
     anycore_tri_transducer tri_transducer(
@@ -598,6 +600,7 @@ Core_OOO coreTop(
 
         .ic2mem_reqaddr_i                  (ic2memReqAddr),
         .ic2mem_reqvalid_i                 (ic2memReqValid),
+        .ic2memReqWay_o                    (ic2memReqWay),
 
         .dc2mem_ldaddr_i                   (dc2memLdAddr),
         .dc2mem_ldvalid_i                  (dc2memLdValid),
