@@ -10,7 +10,7 @@ module anycore_tri_transducer(
 
     input [`ICACHE_BLOCK_ADDR_BITS-1:0] ic2mem_reqaddr_i,
     input                               ic2mem_reqvalid_i,
-    output [1:0]                        ic2memReqWay_o,
+    output [0:0]                        ic2memReqWay_o,
 
     input [`DCACHE_BLOCK_ADDR_BITS-1:0] dc2mem_ldaddr_i,
 
@@ -60,7 +60,7 @@ module anycore_tri_transducer(
     input wire          l15_transducer_inval_dcache_inval_i,
     input wire          l15_transducer_inval_icache_inval_i,
     //said something about this wire
-    input wire [1:0]    l15_transducer_inval_way_i,
+    input wire [0:0]    l15_transducer_inval_way_i,
     input wire          l15_transducer_blockinitstore_i,
 
     output              transducer_l15_req_ack_o,
@@ -82,7 +82,7 @@ module anycore_tri_transducer(
 
     output                              mem2ic_invvalid_o,
     output [`ICACHE_INDEX_BITS-1:0]     mem2ic_invindex_o,
-    output [1:0]                        mem2ic_invway_o,
+    output [0:0]                        mem2ic_invway_o,
 
     input                               dc2mem_stvalid_i,
     output reg                          mem2dc_stcomplete_o,
