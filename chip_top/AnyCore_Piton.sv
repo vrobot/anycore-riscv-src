@@ -103,7 +103,7 @@ module AnyCore_Piton(
 
 wire [`ICACHE_BLOCK_ADDR_BITS-1:0] ic2memReqAddr;    // memory read address
 wire                               ic2memReqValid;   // memory read enable
-wire  [1:0]                        ic2memReqWay;     // memory way 
+wire  [2:0]                        ic2memReqWay;     // memory way 
 wire [`ICACHE_TAG_BITS-1:0]        mem2icTag;        // tag of the incoming data
 wire [`ICACHE_INDEX_BITS-1:0]      mem2icIndex;      // index of the incoming data
 wire [`ICACHE_BITS_IN_LINE-1:0]    mem2icData;       // requested data
@@ -111,7 +111,7 @@ wire                               mem2icRespValid;  // requested data is ready
 
 wire                               mem2icInv;        // icache invalidation
 wire  [`ICACHE_INDEX_BITS-1:0]     mem2icInvInd;     // icache invalidation index
-wire  [1:0]                        mem2icInvWay;     // icache invalidation way (unused)
+wire  [2:0]                        mem2icInvWay;     // icache invalidation way (unused)
 
 // cache-to-memory interface for Loads
 wire [`DCACHE_BLOCK_ADDR_BITS-1:0] dc2memLdAddr;  // memory read address

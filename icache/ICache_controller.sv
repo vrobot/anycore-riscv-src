@@ -61,7 +61,7 @@ module ICache_controller#(
     //wire this into the tri transducer
     //that value comes from roundRobin logic
     //tri transducer line 101, replace with ic2memReqWay after adding to module
-    output logic [1:0]  ic2memReqWay_o,  // memory way
+    output logic [2:0]  ic2memReqWay_o,  // memory way
 
     // memory-to-cache interface
     input  [`ICACHE_TAG_BITS-1:0]       mem2icTag_i,       // tag of the incoming datadetermine
@@ -74,7 +74,7 @@ module ICache_controller#(
     input  [`ICACHE_INDEX_BITS-1:0]     mem2icInvInd_i,  // icache invalidation index
 
     //now this is supposed to be 2 bits wide
-    input  [1:0]                        mem2icInvWay_i,  // icache invalidation way (unused)
+    input  [2:0]                        mem2icInvWay_i,  // icache invalidation way (unused)
 
     input [`ICACHE_INDEX_BITS+`ICACHE_BYTES_IN_LINE_LOG-1:0]  icScratchWrAddr_i,
     input                                                     icScratchWrEn_i,
@@ -117,7 +117,7 @@ module ICache_controller#(
   logic [`ICACHE_BYTES_IN_LINE_LOG-1:0] icScratchWrByte_d1;
   logic [7:0]                           icScratchWrData_d1;
   logic                                 icScratchWrEn_d1;
-  logic [1:0]                           RoundRobin [`ICACHE_NUM_LINES-1:0];
+  logic [2:0]                           RoundRobin [`ICACHE_NUM_LINES-1:0];
 
   always_ff @(posedge clk or posedge reset)
   begin
@@ -185,6 +185,22 @@ module ICache_controller#(
   logic [`ICACHE_TAG_BITS-1:0]    cache_tag3;
   logic [`ICACHE_BITS_IN_LINE-1:0]   cache_data3;
   logic                           cache_valid3;
+
+  logic [`ICACHE_TAG_BITS-1:0]    cache_tag4;
+  logic [`ICACHE_BITS_IN_LINE-1:0]   cache_data4;
+  logic                           cache_valid4;
+
+  logic [`ICACHE_TAG_BITS-1:0]    cache_tag5;
+  logic [`ICACHE_BITS_IN_LINE-1:0]   cache_data5;
+  logic                           cache_valid5;
+
+  logic [`ICACHE_TAG_BITS-1:0]    cache_tag6;
+  logic [`ICACHE_BITS_IN_LINE-1:0]   cache_data6;
+  logic                           cache_valid6;
+
+  logic [`ICACHE_TAG_BITS-1:0]    cache_tag7;
+  logic [`ICACHE_BITS_IN_LINE-1:0]   cache_data7;
+  logic                           cache_valid7;
   
   // hit detection logic. hits are detected the cycle after fetchReq_i goes high.
   // hit can stay high for multiple cycles if no new request comes (e.g. fetch
@@ -195,6 +211,10 @@ module ICache_controller#(
   logic                           hit1;
   logic                           hit2;
   logic                           hit3;
+  logic                           hit4;
+  logic                           hit5;
+  logic                           hit6;
+  logic                           hit7;
   logic                           totalHit;
   
   
@@ -404,6 +424,10 @@ module ICache_controller#(
   logic [(2*`ICACHE_BITS_IN_LINE)-1 : 0] cache_data_extended1;
   logic [(2*`ICACHE_BITS_IN_LINE)-1 : 0] cache_data_extended2;
   logic [(2*`ICACHE_BITS_IN_LINE)-1 : 0] cache_data_extended3;
+  logic [(2*`ICACHE_BITS_IN_LINE)-1 : 0] cache_data_extended4;
+  logic [(2*`ICACHE_BITS_IN_LINE)-1 : 0] cache_data_extended5;
+  logic [(2*`ICACHE_BITS_IN_LINE)-1 : 0] cache_data_extended6;
+  logic [(2*`ICACHE_BITS_IN_LINE)-1 : 0] cache_data_extended7;
 
   // extract the instruction from the cache block
   always_comb
@@ -413,6 +437,10 @@ module ICache_controller#(
     cache_data_extended1 = {{`ICACHE_BITS_IN_LINE{1'b0}},cache_data1}; // Like reading two consecutive cache blocks
     cache_data_extended2 = {{`ICACHE_BITS_IN_LINE{1'b0}},cache_data2}; // Like reading two consecutive cache blocks
     cache_data_extended3 = {{`ICACHE_BITS_IN_LINE{1'b0}},cache_data3}; // Like reading two consecutive cache blocks
+    cache_data_extended4 = {{`ICACHE_BITS_IN_LINE{1'b0}},cache_data4}; // Like reading two consecutive cache blocks
+    cache_data_extended5 = {{`ICACHE_BITS_IN_LINE{1'b0}},cache_data5}; // Like reading two consecutive cache blocks
+    cache_data_extended6 = {{`ICACHE_BITS_IN_LINE{1'b0}},cache_data6}; // Like reading two consecutive cache blocks
+    cache_data_extended7 = {{`ICACHE_BITS_IN_LINE{1'b0}},cache_data7}; // Like reading two consecutive cache blocks
 
     for(i = 0;i < `FETCH_WIDTH;i++)
     begin
@@ -433,7 +461,22 @@ module ICache_controller#(
       begin
       inst[i] = {24'b0,cache_data_extended3[((pc_offset+i)*`SIZE_INSTRUCTION)+`SIZE_INSTRUCTION-1 -: `SIZE_INSTRUCTION]};
       end
-
+      else if (hit4)
+      begin
+      inst[i] = {24'b0,cache_data_extended4[((pc_offset+i)*`SIZE_INSTRUCTION)+`SIZE_INSTRUCTION-1 -: `SIZE_INSTRUCTION]};
+      end
+      else if(hit5)
+      begin
+      inst[i] = {24'b0,cache_data_extended5[((pc_offset+i)*`SIZE_INSTRUCTION)+`SIZE_INSTRUCTION-1 -: `SIZE_INSTRUCTION]};
+      end
+      else if (hit6)
+      begin
+      inst[i] = {24'b0,cache_data_extended6[((pc_offset+i)*`SIZE_INSTRUCTION)+`SIZE_INSTRUCTION-1 -: `SIZE_INSTRUCTION]};
+      end
+      else if (hit7)
+      begin
+      inst[i] = {24'b0,cache_data_extended7[((pc_offset+i)*`SIZE_INSTRUCTION)+`SIZE_INSTRUCTION-1 -: `SIZE_INSTRUCTION]};
+      end
     end
   end
   
@@ -456,6 +499,22 @@ module ICache_controller#(
   logic [`ICACHE_BITS_IN_LINE-1:0]                       data_array3 [`ICACHE_NUM_LINES-1:0];
   logic [(`ICACHE_TAG_BITS*`ICACHE_INSTS_IN_LINE)-1:0] tag_array3 [`ICACHE_NUM_LINES-1:0];
   logic [`ICACHE_NUM_LINES-1:0]                       valid_array3;
+
+  logic [`ICACHE_BITS_IN_LINE-1:0]                       data_array4 [`ICACHE_NUM_LINES-1:0];
+  logic [(`ICACHE_TAG_BITS*`ICACHE_INSTS_IN_LINE)-1:0] tag_array4 [`ICACHE_NUM_LINES-1:0];
+  logic [`ICACHE_NUM_LINES-1:0]                       valid_array4;
+
+  logic [`ICACHE_BITS_IN_LINE-1:0]                       data_array5 [`ICACHE_NUM_LINES-1:0];
+  logic [(`ICACHE_TAG_BITS*`ICACHE_INSTS_IN_LINE)-1:0] tag_array5 [`ICACHE_NUM_LINES-1:0];
+  logic [`ICACHE_NUM_LINES-1:0]                       valid_array5;
+
+  logic [`ICACHE_BITS_IN_LINE-1:0]                       data_array6 [`ICACHE_NUM_LINES-1:0];
+  logic [(`ICACHE_TAG_BITS*`ICACHE_INSTS_IN_LINE)-1:0] tag_array6 [`ICACHE_NUM_LINES-1:0];
+  logic [`ICACHE_NUM_LINES-1:0]                       valid_array6;
+
+  logic [`ICACHE_BITS_IN_LINE-1:0]                       data_array7 [`ICACHE_NUM_LINES-1:0];
+  logic [(`ICACHE_TAG_BITS*`ICACHE_INSTS_IN_LINE)-1:0] tag_array7 [`ICACHE_NUM_LINES-1:0];
+  logic [`ICACHE_NUM_LINES-1:0]                       valid_array7;
   
   //look into if how we're implementing round robin here is correct/ works and doesn't break the code
   
@@ -483,6 +542,22 @@ module ICache_controller#(
       cache_data3  = data_array3[pc_index];
       cache_tag3   = tag_array3[pc_index];
       cache_valid3 = valid_array3[pc_index];
+
+      cache_data4  = data_array4[pc_index];
+      cache_tag4   = tag_array4[pc_index];
+      cache_valid4 = valid_array4[pc_index];
+
+      cache_data5  = data_array5[pc_index];
+      cache_tag5   = tag_array5[pc_index];
+      cache_valid5 = valid_array5[pc_index];
+
+      cache_data6  = data_array6[pc_index];
+      cache_tag6   = tag_array6[pc_index];
+      cache_valid6 = valid_array6[pc_index];
+
+      cache_data7  = data_array7[pc_index];
+      cache_tag7   = tag_array7[pc_index];
+      cache_valid7 = valid_array7[pc_index];
 
   end
   
@@ -522,10 +597,27 @@ module ICache_controller#(
                                     ? fetchReq_i 
                                     : ((cache_tag3 == pc_tag) & cache_valid3 & fetchReq_i) | mmuException_i;
 
+  assign hit4                      = icScratchModeEn_d1 
+                                    ? fetchReq_i 
+                                    : ((cache_tag4 == pc_tag) & cache_valid4 & fetchReq_i) | mmuException_i;
+
+  assign hit5                      = icScratchModeEn_d1 
+                                    ? fetchReq_i 
+                                    : ((cache_tag5 == pc_tag) & cache_valid5 & fetchReq_i) | mmuException_i;
+
+  assign hit6                      = icScratchModeEn_d1 
+                                    ? fetchReq_i 
+                                    : ((cache_tag6 == pc_tag) & cache_valid6 & fetchReq_i) | mmuException_i;
+
+  assign hit7                      = icScratchModeEn_d1 
+                                    ? fetchReq_i 
+                                    : ((cache_tag7 == pc_tag) & cache_valid7 & fetchReq_i) | mmuException_i;
+  
+
   //I'm assuming that we're going to need a variable to see if there was a hit in any of the 4 subcaches
   //add a mux here to find out which way the hit came from 
 
-  assign totalHit = hit | hit1 | hit2 | hit3;
+  assign totalHit = hit | hit1 | hit2 | hit3 | hit4 | hit5 | hit6 | hit7;
 
   // Initializes the first 4 lines of the data array to the following BIST sequence.
   // This is only useful in scratch pad mode cause in cache mode, these lines are invalid.
@@ -581,32 +673,60 @@ module ICache_controller#(
         data_array1[i]         <=  '0;
         data_array2[i]         <=  '0;
         data_array3[i]         <=  '0;
+        data_array4[i]          <=  '0;
+        data_array5[i]          <=  '0;
+        data_array6[i]          <=  '0;
+        data_array7[i]          <=  '0;
       end
     end
     else if(fillValid)
     begin
-        if (mem2icInvWay_i == 2'b00)
+        if (mem2icInvWay_i == 3'b000)
         begin
         data_array[fillIndex]   <=  fillData;
         tag_array[fillIndex]    <=  fillTag;
         end
 
-        else if (mem2icInvWay_i == 2'b01)
+        else if (mem2icInvWay_i == 3'b001)
         begin
         data_array1[fillIndex]   <=  fillData;
         tag_array1[fillIndex]    <=  fillTag;
         end
         
-        else if (mem2icInvWay_i == 2'b10)
+        else if (mem2icInvWay_i == 3'b010)
         begin
         data_array2[fillIndex]   <=  fillData;
         tag_array2[fillIndex]    <=  fillTag;
         end
  
-        else if (mem2icInvWay_i == 2'b11)
+        else if (mem2icInvWay_i == 3'b011)
         begin
         data_array3[fillIndex]   <=  fillData;
         tag_array3[fillIndex]    <=  fillTag;
+        end
+
+        else if (mem2icInvWay_i == 3'b100)
+        begin
+        data_array4[fillIndex]   <=  fillData;
+        tag_array4[fillIndex]    <=  fillTag;
+        end
+
+        else if (mem2icInvWay_i == 3'b101)
+        begin
+        data_array5[fillIndex]   <=  fillData;
+        tag_array5[fillIndex]    <=  fillTag;
+        end
+
+        else if (mem2icInvWay_i == 3'b110)
+        begin
+        data_array6[fillIndex]   <=  fillData;
+        tag_array6[fillIndex]    <=  fillTag;
+        end
+
+        else if (mem2icInvWay_i == 3'b111)
+        begin
+        data_array7[fillIndex]   <=  fillData;
+        tag_array7[fillIndex]    <=  fillTag;
         end
     end
     // Load scratch pad from outside
@@ -634,44 +754,80 @@ module ICache_controller#(
           valid_array1[i] <= 1'b0;
           valid_array2[i] <= 1'b0;
           valid_array3[i] <= 1'b0;
+          valid_array4[i]  <= 1'b0;
+          valid_array5[i]  <= 1'b0;
+          valid_array6[i]  <= 1'b0;
+          valid_array7[i]  <= 1'b0;
         end
     end
     else if(mem2icInv_i)
     begin
-      if (mem2icInvWay_i == 2'b00)
+      if (mem2icInvWay_i == 3'b000)
       begin
         valid_array[fillIndex] <= 1'b0;
       end
-      else if (mem2icInvWay_i == 2'b01)
+      else if (mem2icInvWay_i == 3'b001)
       begin
         valid_array1[fillIndex] <= 1'b0;
       end
-      else if (mem2icInvWay_i == 2'b10)
+      else if (mem2icInvWay_i == 3'b010)
       begin
         valid_array2[fillIndex] <= 1'b0;
       end
-      else if (mem2icInvWay_i == 2'b11)
+      else if (mem2icInvWay_i == 3'b011)
       begin
         valid_array3[fillIndex] <= 1'b0;
+      end
+      else if (mem2icInvWay_i == 3'b100)
+      begin
+        valid_array4[fillIndex] <= 1'b0;
+      end
+      else if (mem2icInvWay_i == 3'b101)
+      begin
+        valid_array5[fillIndex] <= 1'b0;
+      end
+      else if (mem2icInvWay_i == 3'b110)
+      begin
+        valid_array6[fillIndex] <= 1'b0;
+      end
+      else if (mem2icInvWay_i == 3'b111)
+      begin
+        valid_array7[fillIndex] <= 1'b0;
       end
     end
     else if(fillValid)
     begin
-      if (mem2icInvWay_i == 2'b00)
+      if (mem2icInvWay_i == 3'b000)
       begin
         valid_array[fillIndex] <= 1'b1;
       end
-      else if (mem2icInvWay_i == 2'b01)
+      else if (mem2icInvWay_i == 3'b001)
       begin
         valid_array1[fillIndex] <= 1'b1;
       end
-      else if (mem2icInvWay_i == 2'b10)
+      else if (mem2icInvWay_i == 3'b010)
       begin
         valid_array2[fillIndex] <= 1'b1;
       end
-      else if (mem2icInvWay_i == 2'b11)
+      else if (mem2icInvWay_i == 3'b011)
       begin
         valid_array3[fillIndex] <= 1'b1;
+      end
+      else if (mem2icInvWay_i == 3'b100)
+      begin
+        valid_array4[fillIndex] <= 1'b1;
+      end
+      else if (mem2icInvWay_i == 3'b101)
+      begin
+        valid_array5[fillIndex] <= 1'b1;
+      end
+      else if (mem2icInvWay_i == 3'b110)
+      begin
+        valid_array6[fillIndex] <= 1'b1;
+      end
+      else if (mem2icInvWay_i == 3'b111)
+      begin
+        valid_array7[fillIndex] <= 1'b1;
       end
     end
   end
