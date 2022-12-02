@@ -117,7 +117,7 @@ module ICache_controller#(
   logic [`ICACHE_BYTES_IN_LINE_LOG-1:0] icScratchWrByte_d1;
   logic [7:0]                           icScratchWrData_d1;
   logic                                 icScratchWrEn_d1;
-  logic [1:0]                           RoundRobin [`ICACHE_NUM_LINES-1:0];
+  logic [0:0]                           RoundRobin [`ICACHE_NUM_LINES-1:0];
 
   always_ff @(posedge clk or posedge reset)
   begin
@@ -537,13 +537,13 @@ module ICache_controller#(
     end
     else if(fillValid)
     begin
-        if (mem2icInvWay_i == 2'b00)
+        if (mem2icInvWay_i == 1'b0)
         begin
         data_array[fillIndex]   <=  fillData;
         tag_array[fillIndex]    <=  fillTag;
         end
 
-        else if (mem2icInvWay_i == 2'b01)
+        else if (mem2icInvWay_i == 1'b1)
         begin
         data_array1[fillIndex]   <=  fillData;
         tag_array1[fillIndex]    <=  fillTag;
@@ -576,22 +576,22 @@ module ICache_controller#(
     end
     else if(mem2icInv_i)
     begin
-      if (mem2icInvWay_i == 2'b00)
+      if (mem2icInvWay_i == 1'b0)
       begin
         valid_array[fillIndex] <= 1'b0;
       end
-      else if (mem2icInvWay_i == 2'b01)
+      else if (mem2icInvWay_i == 1'b1)
       begin
         valid_array1[fillIndex] <= 1'b0;
       end
     end
     else if(fillValid)
     begin
-      if (mem2icInvWay_i == 2'b00)
+      if (mem2icInvWay_i == 1'b0)
       begin
         valid_array[fillIndex] <= 1'b1;
       end
-      else if (mem2icInvWay_i == 2'b01)
+      else if (mem2icInvWay_i == 1'b1)
       begin
         valid_array1[fillIndex] <= 1'b1;
       end
