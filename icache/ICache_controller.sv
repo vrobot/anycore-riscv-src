@@ -249,14 +249,57 @@ module ICache_controller#(
     if (reset) 
     begin
       int i;
+      int j;
       for (i = 0; i < `ICACHE_NUM_LINES; i++) 
       begin
         RoundRobin[i] <= '0;
+        for (j = 0; j < `ICACHE_NUM_WAYS; j++)
+        begin
+          lru[j][i] = j;
+        end
       end
+
     end 
     else if (miss) 
     begin
         RoundRobin[pc_index] <= RoundRobin[pc_index] + 1'b1;
+    end
+    else if (totalHit) 
+    begin
+      int i;
+      int hitnum;
+      int x;
+      $display("here");
+      for (hitnum = 0; hitnum < `ICACHE_NUM_WAYS; hitnum++)
+      begin
+        if(hit[hitnum])
+        begin
+          i = hitnum;
+          $display("in here");
+          break;
+        end
+      end
+      $display("value of i: %d", i);
+      $display("value of hitnum: %d", hitnum);
+      for (i = 0; i < `ICACHE_NUM_WAYS; i++)
+      begin
+        if (lru[i][pc_index] == hitnum)
+        begin
+          x = i;
+          break;
+        end
+      end
+      for (i = x; i < `ICACHE_NUM_WAYS - 1; i++)
+      begin
+        $display("lru");
+        lru[i][pc_index] = lru[i+1][pc_index];
+      end
+      lru[`ICACHE_NUM_WAYS - 1][pc_index] = hitnum;
+      for (i = 0; i < `ICACHE_NUM_WAYS; i++)
+      begin
+        $display("lru: %d", lru[i][pc_index]);
+      end
+      
     end
   end
 
@@ -441,8 +484,9 @@ module ICache_controller#(
    
   always_comb
   begin
-    int i;
-      ic2memReqWay_o = RoundRobin[pc_index];
+      int i;
+      // ic2memReqWay_o = RoundRobin[pc_index];
+      ic2memReqWay_o = lru[0][pc_index];
       
       for(i = 0;i < `ICACHE_NUM_WAYS;i++)
       begin
@@ -551,6 +595,7 @@ module ICache_controller#(
         begin
           data_array[i][fillIndex]   <=  fillData;
           tag_array[i][fillIndex]    <=  fillTag;
+          $display("evicting!");
         //  ic2memReqWay_o = (mem2icInvWay_i < (ICACHE_NUM_WAYS/2)) ? random(ICACHE_NUM_WAYS/2, ICACHE_NUM_WAYS) : random(0, ICACHE_NUM_WAYS/2 - 1);
           break;
         end
