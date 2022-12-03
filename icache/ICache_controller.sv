@@ -117,7 +117,8 @@ module ICache_controller#(
   logic [`ICACHE_BYTES_IN_LINE_LOG-1:0] icScratchWrByte_d1;
   logic [7:0]                           icScratchWrData_d1;
   logic                                 icScratchWrEn_d1;
-  logic [`ICACHE_NUM_WAYS_LOG-1:0]                           RoundRobin [`ICACHE_NUM_LINES-1:0];
+  logic [`ICACHE_NUM_WAYS_LOG-1:0]      RoundRobin [`ICACHE_NUM_LINES-1:0];
+  logic [`ICACHE_NUM_WAYS_LOG-1:0]          lru [`ICACHE_NUM_WAYS-1:0][`ICACHE_NUM_LINES-1:0];
 
   always_ff @(posedge clk or posedge reset)
   begin
@@ -443,13 +444,13 @@ module ICache_controller#(
     int i;
       ic2memReqWay_o = RoundRobin[pc_index];
       
-      for(i = 0;i < `ICACHE_NUM_WAYS_LOG;i++)
+      for(i = 0;i < `ICACHE_NUM_WAYS;i++)
       begin
         cache_data[i]  = data_array[i][pc_index];
         cache_tag[i]   = tag_array[i][pc_index];
         cache_valid[i] = valid_array[i][pc_index];
       end
-      for(i = 0;i < `ICACHE_NUM_WAYS_LOG;i++)
+      for(i = 0;i < `ICACHE_NUM_WAYS;i++)
       begin
         hit[i]                      = icScratchModeEn_d1 
                                         ? fetchReq_i 
@@ -534,7 +535,7 @@ module ICache_controller#(
     int j;
     if(reset)
     begin
-      for(i = 0;i < `ICACHE_NUM_WAYS_LOG;i++)
+      for(i = 0;i < `ICACHE_NUM_WAYS;i++)
       begin
         for(j=0 ; j < `ICACHE_NUM_LINES; j++)
         begin
@@ -544,12 +545,13 @@ module ICache_controller#(
     end
     else if(fillValid)
     begin
-      for(i = 0;i < `ICACHE_NUM_WAYS_LOG;i++)
+      for(i = 0;i < `ICACHE_NUM_WAYS;i++)
       begin
         if (mem2icInvWay_i == i)
         begin
           data_array[i][fillIndex]   <=  fillData;
           tag_array[i][fillIndex]    <=  fillTag;
+        //  ic2memReqWay_o = (mem2icInvWay_i < (ICACHE_NUM_WAYS/2)) ? random(ICACHE_NUM_WAYS/2, ICACHE_NUM_WAYS) : random(0, ICACHE_NUM_WAYS/2 - 1);
           break;
         end
       end
@@ -574,7 +576,7 @@ module ICache_controller#(
     begin
       int i;
       int j;
-      for(i = 0;i < `ICACHE_NUM_WAYS_LOG;i++)
+      for(i = 0;i < `ICACHE_NUM_WAYS;i++)
       begin
         for(j = 0; j < `ICACHE_NUM_LINES;j++)
         begin
@@ -585,7 +587,7 @@ module ICache_controller#(
     else if(mem2icInv_i)
     begin
       int i;
-      for(i = 0;i < `ICACHE_NUM_WAYS_LOG;i++)
+      for(i = 0;i < `ICACHE_NUM_WAYS;i++)
       begin
         if (mem2icInvWay_i == i)
         begin
@@ -597,7 +599,7 @@ module ICache_controller#(
     else if(fillValid)
     begin
       int i;
-      for(i = 0;i < `ICACHE_NUM_WAYS_LOG;i++)
+      for(i = 0;i < `ICACHE_NUM_WAYS;i++)
       begin
         if (mem2icInvWay_i == i)
         begin
