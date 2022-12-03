@@ -263,6 +263,8 @@
   `define ICACHE_BLOCK_ADDR_BITS  (`SIZE_PC - `ICACHE_OFFSET_BITS - `ICACHE_INST_BYTE_OFFSET_LOG) // Cache block address 
   `define ICACHE_PC_PKT_BITS    8
   `define ICACHE_INST_PKT_BITS  8
+  `define ICACHE_NUM_WAYS 8
+  `define ICACHE_NUM_WAYS_LOG 5
 `endif
 
 `ifdef DATA_CACHE
