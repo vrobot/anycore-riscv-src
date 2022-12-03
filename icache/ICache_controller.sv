@@ -118,7 +118,7 @@ module ICache_controller#(
   logic [7:0]                           icScratchWrData_d1;
   logic                                 icScratchWrEn_d1;
   logic [`ICACHE_NUM_WAYS_LOG-1:0]      RoundRobin [`ICACHE_NUM_LINES-1:0];
-  logic [`ICACHE_NUM_WAYS_LOG-1:0]          lru [`ICACHE_NUM_WAYS-1:0][`ICACHE_NUM_LINES-1:0];
+  logic [`ICACHE_NUM_WAYS_LOG-1:0]      lru [`ICACHE_NUM_WAYS-1:0][`ICACHE_NUM_LINES-1:0];
 
   always_ff @(posedge clk or posedge reset)
   begin
@@ -171,9 +171,9 @@ module ICache_controller#(
   
   // tag, valid and data read from cache /////////////////////
   //PROBABLY NEED TO MODIFY THE SIZE OF THIS
-  logic [`ICACHE_TAG_BITS-1:0]    cache_tag [`ICACHE_NUM_WAYS_LOG-1:0];
-  logic [`ICACHE_BITS_IN_LINE-1:0]   cache_data [`ICACHE_NUM_WAYS_LOG-1:0];
-  logic                           cache_valid [`ICACHE_NUM_WAYS_LOG-1:0];
+  logic [`ICACHE_TAG_BITS-1:0]    cache_tag [`ICACHE_NUM_WAYS-1:0];
+  logic [`ICACHE_BITS_IN_LINE-1:0]   cache_data [`ICACHE_NUM_WAYS-1:0];
+  logic                           cache_valid [`ICACHE_NUM_WAYS-1:0];
 
 /*
   logic [`ICACHE_TAG_BITS-1:0]    cache_tag1;
@@ -194,7 +194,7 @@ module ICache_controller#(
   logic   [0:`FETCH_WIDTH-1]      instValid;
   logic   [`SIZE_INSTRUCTION-1:0] inst [0:`FETCH_WIDTH-1];
 
-  logic [`ICACHE_NUM_WAYS_LOG-1:0]   hit;       
+  logic [`ICACHE_NUM_WAYS-1:0]   hit;       
   logic                           totalHit;
   
   
@@ -400,12 +400,12 @@ module ICache_controller#(
   end
   
   //DO WE NEED TO MODIFY THE SIZE OF THIS AS WELL?
-  logic [(2*`ICACHE_BITS_IN_LINE)-1 : 0] cache_data_extended [`ICACHE_NUM_WAYS_LOG-1:0];
+  logic [(2*`ICACHE_BITS_IN_LINE)-1 : 0] cache_data_extended [`ICACHE_NUM_WAYS-1:0];
   // extract the instruction from the cache block
   always_comb
   begin
     int i;
-    for(i = 0; i < `ICACHE_NUM_WAYS_LOG; i++)
+    for(i = 0; i < `ICACHE_NUM_WAYS; i++)
     begin
       cache_data_extended[i] = {{`ICACHE_BITS_IN_LINE{1'b0}},cache_data[i]};
     end
@@ -414,7 +414,7 @@ module ICache_controller#(
     begin
       //Instructions going to the pipeline is still 64 bit but in the cache, its 40 bits. Padding with 0s.
       int j;
-      for(j = 0; j < `ICACHE_NUM_WAYS_LOG; j++)
+      for(j = 0; j < `ICACHE_NUM_WAYS; j++)
       begin
         if (hit[j])
         begin
@@ -429,9 +429,9 @@ module ICache_controller#(
   /* Cache data and tag arrays */ 
   //this is what we duplicate to add associativity
   //start here make everything 0-3
-  logic [`ICACHE_BITS_IN_LINE-1:0]                       data_array [`ICACHE_NUM_WAYS_LOG-1:0] [`ICACHE_NUM_LINES-1:0];
-  logic [(`ICACHE_TAG_BITS*`ICACHE_INSTS_IN_LINE)-1:0] tag_array [`ICACHE_NUM_WAYS_LOG-1:0] [`ICACHE_NUM_LINES-1:0];
-  logic [`ICACHE_NUM_LINES-1:0]                       valid_array [`ICACHE_NUM_WAYS_LOG-1:0];
+  logic [`ICACHE_BITS_IN_LINE-1:0]                       data_array [`ICACHE_NUM_WAYS-1:0] [`ICACHE_NUM_LINES-1:0];
+  logic [(`ICACHE_TAG_BITS*`ICACHE_INSTS_IN_LINE)-1:0] tag_array [`ICACHE_NUM_WAYS-1:0] [`ICACHE_NUM_LINES-1:0];
+  logic [`ICACHE_NUM_LINES-1:0]                       valid_array [`ICACHE_NUM_WAYS-1:0];
   
   //look into if how we're implementing round robin here is correct/ works and doesn't break the code
   
