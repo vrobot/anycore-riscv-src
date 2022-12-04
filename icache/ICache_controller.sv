@@ -120,6 +120,15 @@ module ICache_controller#(
   logic [`ICACHE_NUM_WAYS_LOG-1:0]      RoundRobin [`ICACHE_NUM_LINES-1:0];
   logic [`ICACHE_NUM_WAYS_LOG-1:0]      lru [`ICACHE_NUM_WAYS-1:0][`ICACHE_NUM_LINES-1:0];
 
+  logic [`WIDTH-1:0]                  current;
+  logic [`WIDTH-1:0]                  update;
+
+  logic [`ICACHE_NUM_WAYS-1:0]        access;
+  logic [`ICACHE_NUM_WAYS-1:0]        lru_pre;
+  logic [`ICACHE_NUM_WAYS-1:0]        lru_post;
+
+  logic [`ICACHE_NUM_WAYS-1:0]        expand [`ICACHE_NUM_WAYS-1:0][`ICACHE_NUM_LINES-1:0];
+
   always_ff @(posedge clk or posedge reset)
   begin
     if(reset)
@@ -175,19 +184,6 @@ module ICache_controller#(
   logic [`ICACHE_BITS_IN_LINE-1:0]   cache_data [`ICACHE_NUM_WAYS-1:0];
   logic                           cache_valid [`ICACHE_NUM_WAYS-1:0];
 
-/*
-  logic [`ICACHE_TAG_BITS-1:0]    cache_tag1;
-  logic [`ICACHE_BITS_IN_LINE-1:0]   cache_data1;
-  logic                           cache_valid1;
-
-  logic [`ICACHE_TAG_BITS-1:0]    cache_tag2;
-  logic [`ICACHE_BITS_IN_LINE-1:0]   cache_data2;
-  logic                           cache_valid2;
-
-  logic [`ICACHE_TAG_BITS-1:0]    cache_tag3;
-  logic [`ICACHE_BITS_IN_LINE-1:0]   cache_data3;
-  logic                           cache_valid3;
-*/  
   // hit detection logic. hits are detected the cycle after fetchReq_i goes high.
   // hit can stay high for multiple cycles if no new request comes (e.g. fetch
   // stalls)
@@ -249,57 +245,14 @@ module ICache_controller#(
     if (reset) 
     begin
       int i;
-      int j;
       for (i = 0; i < `ICACHE_NUM_LINES; i++) 
       begin
-        RoundRobin[i] <= '0;
-        for (j = 0; j < `ICACHE_NUM_WAYS; j++)
-        begin
-          lru[j][i] = j;
-        end
+        RoundRobin[i] <= '0; 
       end
-
     end 
     else if (miss) 
     begin
         RoundRobin[pc_index] <= RoundRobin[pc_index] + 1'b1;
-    end
-    else if (totalHit) 
-    begin
-      int i;
-      int hitnum;
-      int x;
-      $display("here");
-      for (hitnum = 0; hitnum < `ICACHE_NUM_WAYS; hitnum++)
-      begin
-        if(hit[hitnum])
-        begin
-          i = hitnum;
-          $display("in here");
-          break;
-        end
-      end
-      $display("value of i: %d", i);
-      $display("value of hitnum: %d", hitnum);
-      for (i = 0; i < `ICACHE_NUM_WAYS; i++)
-      begin
-        if (lru[i][pc_index] == hitnum)
-        begin
-          x = i;
-          break;
-        end
-      end
-      for (i = x; i < `ICACHE_NUM_WAYS - 1; i++)
-      begin
-        $display("lru");
-        lru[i][pc_index] = lru[i+1][pc_index];
-      end
-      lru[`ICACHE_NUM_WAYS - 1][pc_index] = hitnum;
-      for (i = 0; i < `ICACHE_NUM_WAYS; i++)
-      begin
-        $display("lru: %d", lru[i][pc_index]);
-      end
-      
     end
   end
 
@@ -485,8 +438,10 @@ module ICache_controller#(
   always_comb
   begin
       int i;
-      // ic2memReqWay_o = RoundRobin[pc_index];
-      ic2memReqWay_o = lru[0][pc_index];
+      int isHit;
+      int offset;
+      int j;
+      ic2memReqWay_o = RoundRobin[pc_index];
       
       for(i = 0;i < `ICACHE_NUM_WAYS;i++)
       begin
@@ -499,9 +454,100 @@ module ICache_controller#(
         hit[i]                      = icScratchModeEn_d1 
                                         ? fetchReq_i 
                                         : ((cache_tag[i] == pc_tag) & cache_valid[i] & fetchReq_i) | mmuException_i;
+        if (hit[i] == 1'b1)
+        begin
+          isHit = i;
+        end
       end
 
+      // logic [`WIDTH-1:0]                  current;
+      // logic [`WIDTH-1:0]                  update;
 
+      // logic [`ICACHE_NUM_WAYS-1:0]        access;
+      // logic [`ICACHE_NUM_WAYS-1:0]        lru_pre;
+      // logic [`ICACHE_NUM_WAYS-1:0]        lru_post;
+
+      // logic [`ICACHE_NUM_WAYS-1:0]        expand [`ICACHE_NUM_WAYS-1:0];
+
+      //perhaps logic for lru should be here
+      //copied from a github website and appropriated to systemverilog
+      //
+      // offset = 0;
+
+      // for (i = 0; i < `ICACHE_NUM_WAYS; i = i + 1) 
+      // begin
+      //    expand[i][i] = 1'b1;
+
+      //    for (j = i + 1; j < `ICACHE_NUM_WAYS; j = j + 1) 
+      //    begin
+      //       expand[i][j] = current[offset+j-i-1];
+      //    end
+
+      //    for (j = 0; j < i; j = j + 1)
+      //    begin
+      //       expand[i][j] = ~expand[j][i];
+      //    end
+
+      //    offset = offset + `ICACHE_NUM_WAYS - i - 1;
+      // end
+
+      // for (i = 0; i < `ICACHE_NUM_WAYS; i = i + 1) 
+      // begin
+      //   for (j = 0; j < `ICACHE_NUM_WAYS; j = j + 1) 
+      //   begin
+      //     lru_pre[i] = lru_pre[i] & expand[i][j];
+      //   end
+      // end
+
+      // for (i = 0; i < `ICACHE_NUM_WAYS; i = i + 1) 
+      // begin
+      //    if (access[i]) 
+      //    begin
+      //       for (j = 0; j < `ICACHE_NUM_WAYS; j = j + 1) 
+      //       begin
+      //          if (i != j) 
+      //          begin
+      //             expand[i][j] = 1'b0;
+      //          end
+      //       end
+      //       for (j = 0; j < `ICACHE_NUM_WAYS; j = j + 1) 
+      //       begin
+      //          if (i != j) 
+      //          begin
+      //             expand[j][i] = 1'b1;
+      //          end
+      //       end
+      //    end
+      // end
+
+      // offset = 0;
+      // for (i = 0; i < `ICACHE_NUM_WAYS; i = i + 1) 
+      // begin
+      //    for (j = i + 1; j < `ICACHE_NUM_WAYS; j = j + 1) 
+      //    begin
+      //       update[offset+j-i-1] = expand[i][j];
+      //    end
+      //    offset = offset + `ICACHE_NUM_WAYS - i - 1;
+      // end
+
+      // for (i = 0; i < `ICACHE_NUM_WAYS; i = i + 1) 
+      // begin
+      //   for (j = 0; j < `ICACHE_NUM_WAYS; j = j + 1) 
+      //   begin
+      //     lru_post[i] = lru_post[i] & expand[i][j];
+      //   end
+      // end
+
+      // offset = 0;
+      // for (i = 0; i < `ICACHE_NUM_WAYS; i = i + 1) 
+      // begin
+      //   if (lru_post[i] == 1'b1)
+      //   begin
+      //     i = offset;
+      //     break;
+      //   end
+      //   offset += 1;
+      // end
   end
   
   // A fetch only generates a hit if fetchReq_i is high

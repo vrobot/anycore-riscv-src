@@ -265,6 +265,7 @@
   `define ICACHE_INST_PKT_BITS  8
   `define ICACHE_NUM_WAYS 16
   `define ICACHE_NUM_WAYS_LOG 4
+  `define WIDTH (`ICACHE_NUM_WAYS*(`ICACHE_NUM_WAYS-1) >> 1)
 `endif
 
 `ifdef DATA_CACHE
