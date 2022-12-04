@@ -258,24 +258,45 @@ module ICache_controller#(
           lru[j][i] = j;
         end
       end
-
     end 
+    //in case of a miss, should we just implement this by 1 as well so instead of lru[0][pc_index] we have something else?
     else if (miss) 
     begin
         RoundRobin[pc_index] <= RoundRobin[pc_index] + 1'b1;
+        if (fillValid)
+        begin
+          int i;
+          int x;
+          for (i = 0; i < `ICACHE_NUM_WAYS; i++)
+          begin
+            if (lru[i][pc_index] == mem2icInvWay_i)
+            begin
+              x = i;
+              break;
+            end
+          end
+          for (i = x; i < `ICACHE_NUM_WAYS - 1; i++)
+          begin
+            $display("lru");
+            lru[i][pc_index] = lru[i+1][pc_index];
+          end
+          lru[`ICACHE_NUM_WAYS - 1][pc_index] = mem2icInvWay_i;
+          for (i = 0; i < `ICACHE_NUM_WAYS; i++)
+          begin
+            $display("lru: %d", lru[i][pc_index]);
+          end
+        end
     end
     else if (totalHit) 
     begin
       int i;
       int hitnum;
       int x;
-      $display("here");
       for (hitnum = 0; hitnum < `ICACHE_NUM_WAYS; hitnum++)
       begin
         if(hit[hitnum])
         begin
           i = hitnum;
-          $display("in here");
           break;
         end
       end
@@ -299,7 +320,6 @@ module ICache_controller#(
       begin
         $display("lru: %d", lru[i][pc_index]);
       end
-      
     end
   end
 
@@ -485,7 +505,11 @@ module ICache_controller#(
   always_comb
   begin
       int i;
-      // ic2memReqWay_o = RoundRobin[pc_index];
+      //ic2memReqWay_o = RoundRobin[pc_index];
+      //should this be the hit way instead? as in the way that is the least recently used up next?
+      //we probably need the actual value in there instead of the index?
+      //don't we also care about the miss? in a miss, we need to add to the cache so if its full we
+      //also need to evict a cache line?
       ic2memReqWay_o = lru[0][pc_index];
       
       for(i = 0;i < `ICACHE_NUM_WAYS;i++)
@@ -577,6 +601,7 @@ module ICache_controller#(
   begin
     int i;
     int j;
+    int x;
     if(reset)
     begin
       for(i = 0;i < `ICACHE_NUM_WAYS;i++)
@@ -589,17 +614,9 @@ module ICache_controller#(
     end
     else if(fillValid)
     begin
-      for(i = 0;i < `ICACHE_NUM_WAYS;i++)
-      begin
-        if (mem2icInvWay_i == i)
-        begin
-          data_array[i][fillIndex]   <=  fillData;
-          tag_array[i][fillIndex]    <=  fillTag;
-          $display("evicting!");
-        //  ic2memReqWay_o = (mem2icInvWay_i < (ICACHE_NUM_WAYS/2)) ? random(ICACHE_NUM_WAYS/2, ICACHE_NUM_WAYS) : random(0, ICACHE_NUM_WAYS/2 - 1);
-          break;
-        end
-      end
+      data_array[mem2icInvWay_i][fillIndex]   <=  fillData;
+      tag_array[mem2icInvWay_i][fillIndex]    <=  fillTag;
+          //need to also redirect this information in order for it to work?
     end
     // Load scratch pad from outside
     else if(icScratchWrEn_d1 & icScratchModeEn_d1)
