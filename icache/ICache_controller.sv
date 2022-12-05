@@ -119,6 +119,8 @@ module ICache_controller#(
   logic                                 icScratchWrEn_d1;
   logic [`ICACHE_NUM_WAYS_LOG-1:0]      RoundRobin [`ICACHE_NUM_LINES-1:0];
   logic [`ICACHE_NUM_WAYS_LOG-1:0]      lru [`ICACHE_NUM_WAYS-1:0][`ICACHE_NUM_LINES-1:0];
+  int misses = 0;
+  int hits = 0;
 
   always_ff @(posedge clk or posedge reset)
   begin
@@ -174,20 +176,7 @@ module ICache_controller#(
   logic [`ICACHE_TAG_BITS-1:0]    cache_tag [`ICACHE_NUM_WAYS-1:0];
   logic [`ICACHE_BITS_IN_LINE-1:0]   cache_data [`ICACHE_NUM_WAYS-1:0];
   logic                           cache_valid [`ICACHE_NUM_WAYS-1:0];
-
-/*
-  logic [`ICACHE_TAG_BITS-1:0]    cache_tag1;
-  logic [`ICACHE_BITS_IN_LINE-1:0]   cache_data1;
-  logic                           cache_valid1;
-
-  logic [`ICACHE_TAG_BITS-1:0]    cache_tag2;
-  logic [`ICACHE_BITS_IN_LINE-1:0]   cache_data2;
-  logic                           cache_valid2;
-
-  logic [`ICACHE_TAG_BITS-1:0]    cache_tag3;
-  logic [`ICACHE_BITS_IN_LINE-1:0]   cache_data3;
-  logic                           cache_valid3;
-*/  
+  
   // hit detection logic. hits are detected the cycle after fetchReq_i goes high.
   // hit can stay high for multiple cycles if no new request comes (e.g. fetch
   // stalls)
@@ -262,29 +251,34 @@ module ICache_controller#(
     //in case of a miss, should we just implement this by 1 as well so instead of lru[0][pc_index] we have something else?
     else if (miss) 
     begin
+        int i;
+        int x;
+        misses <= misses + 1;
+        $display("MISSES: %d", misses);
         RoundRobin[pc_index] <= RoundRobin[pc_index] + 1'b1;
-        if (fillValid)
+        //need to check if there is a fill valid or else we cannot actually 
+        //add anything to the cache
+        //find which one of the ways is the one being invalidated
+        for (i = 0; i < `ICACHE_NUM_WAYS; i++)
         begin
-          int i;
-          int x;
-          for (i = 0; i < `ICACHE_NUM_WAYS; i++)
+          if (lru[i][pc_index] == mem2icInvWay_i)
           begin
-            if (lru[i][pc_index] == mem2icInvWay_i)
-            begin
-              x = i;
-              break;
-            end
+            x = i;
+            break;
           end
-          for (i = x; i < `ICACHE_NUM_WAYS - 1; i++)
-          begin
-            $display("lru");
-            lru[i][pc_index] = lru[i+1][pc_index];
-          end
-          lru[`ICACHE_NUM_WAYS - 1][pc_index] = mem2icInvWay_i;
-          for (i = 0; i < `ICACHE_NUM_WAYS; i++)
-          begin
-            $display("lru: %d", lru[i][pc_index]);
-          end
+        end
+        //now do the same process of moving it to the the most recently used
+        //this is because whatever was in it was evicted and the newest entry 
+        //being put in now counts as the most recently used
+        for (i = x; i < `ICACHE_NUM_WAYS - 1; i++)
+        begin
+          //$display("lru");
+          lru[i][pc_index] = lru[i+1][pc_index];
+        end
+        lru[`ICACHE_NUM_WAYS - 1][pc_index] = mem2icInvWay_i;
+        for (i = 0; i < `ICACHE_NUM_WAYS; i++)
+        begin
+          //$display("lru: %d", lru[i][pc_index]);
         end
     end
     else if (totalHit) 
@@ -292,6 +286,10 @@ module ICache_controller#(
       int i;
       int hitnum;
       int x;
+      hits <= hits + 1;
+      $display("HITS: %d", hits);
+      //figure out which way there was a hit in the first place
+      //this is to figure out which way in the lru do we need to move to most recently used
       for (hitnum = 0; hitnum < `ICACHE_NUM_WAYS; hitnum++)
       begin
         if(hit[hitnum])
@@ -300,8 +298,10 @@ module ICache_controller#(
           break;
         end
       end
-      $display("value of i: %d", i);
-      $display("value of hitnum: %d", hitnum);
+      //$display("value of i: %d", i);
+      //$display("value of hitnum: %d", hitnum);
+      //need to figure out where in the lru is that hit way
+      //because it could have been moved around
       for (i = 0; i < `ICACHE_NUM_WAYS; i++)
       begin
         if (lru[i][pc_index] == hitnum)
@@ -310,15 +310,19 @@ module ICache_controller#(
           break;
         end
       end
+      //now we have to shift all elements down and add the way to the end
+      //which counts as it being the most recently used
+      //on the way out, the way at lru[0] which is the least recently used will be the
+      //one that will be evicted and replaced.
       for (i = x; i < `ICACHE_NUM_WAYS - 1; i++)
       begin
-        $display("lru");
+        //$display("lru");
         lru[i][pc_index] = lru[i+1][pc_index];
       end
       lru[`ICACHE_NUM_WAYS - 1][pc_index] = hitnum;
       for (i = 0; i < `ICACHE_NUM_WAYS; i++)
       begin
-        $display("lru: %d", lru[i][pc_index]);
+        //$display("lru: %d", lru[i][pc_index]);
       end
     end
   end
