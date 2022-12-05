@@ -176,7 +176,7 @@ module ICache_controller#(
   logic [`ICACHE_TAG_BITS-1:0]    cache_tag [`ICACHE_NUM_WAYS-1:0];
   logic [`ICACHE_BITS_IN_LINE-1:0]   cache_data [`ICACHE_NUM_WAYS-1:0];
   logic                           cache_valid [`ICACHE_NUM_WAYS-1:0];
-  
+
   // hit detection logic. hits are detected the cycle after fetchReq_i goes high.
   // hit can stay high for multiple cycles if no new request comes (e.g. fetch
   // stalls)
@@ -276,10 +276,10 @@ module ICache_controller#(
           lru[i][pc_index] = lru[i+1][pc_index];
         end
         lru[`ICACHE_NUM_WAYS - 1][pc_index] = mem2icInvWay_i;
-        for (i = 0; i < `ICACHE_NUM_WAYS; i++)
-        begin
-          //$display("lru: %d", lru[i][pc_index]);
-        end
+        // for (i = 0; i < `ICACHE_NUM_WAYS; i++)
+        // begin
+        //   $display("lru: %d", lru[i][pc_index]);
+        // end
     end
     else if (totalHit) 
     begin
@@ -320,10 +320,10 @@ module ICache_controller#(
         lru[i][pc_index] = lru[i+1][pc_index];
       end
       lru[`ICACHE_NUM_WAYS - 1][pc_index] = hitnum;
-      for (i = 0; i < `ICACHE_NUM_WAYS; i++)
-      begin
-        //$display("lru: %d", lru[i][pc_index]);
-      end
+      // for (i = 0; i < `ICACHE_NUM_WAYS; i++)
+      // begin
+      //   $display("lru: %d", lru[i][pc_index]);
+      // end
     end
   end
 
@@ -509,12 +509,12 @@ module ICache_controller#(
   always_comb
   begin
       int i;
-      //ic2memReqWay_o = RoundRobin[pc_index];
+      ic2memReqWay_o = RoundRobin[pc_index];
       //should this be the hit way instead? as in the way that is the least recently used up next?
       //we probably need the actual value in there instead of the index?
       //don't we also care about the miss? in a miss, we need to add to the cache so if its full we
       //also need to evict a cache line?
-      ic2memReqWay_o = lru[0][pc_index];
+      //ic2memReqWay_o = lru[0][pc_index];
       
       for(i = 0;i < `ICACHE_NUM_WAYS;i++)
       begin
@@ -606,6 +606,7 @@ module ICache_controller#(
     int i;
     int j;
     int x;
+    //maybe change this to be <= j'b0, instead of double for-loop to make the code cleaner
     if(reset)
     begin
       for(i = 0;i < `ICACHE_NUM_WAYS;i++)
@@ -620,7 +621,7 @@ module ICache_controller#(
     begin
       data_array[mem2icInvWay_i][fillIndex]   <=  fillData;
       tag_array[mem2icInvWay_i][fillIndex]    <=  fillTag;
-          //need to also redirect this information in order for it to work?
+      //need to also redirect this information in order for it to work?
     end
     // Load scratch pad from outside
     else if(icScratchWrEn_d1 & icScratchModeEn_d1)
@@ -650,6 +651,7 @@ module ICache_controller#(
         end
       end
     end
+    //change this to avoid the for loop.
     else if(mem2icInv_i)
     begin
       int i;
@@ -662,6 +664,7 @@ module ICache_controller#(
         end
       end
     end
+    //change this to avoid the for loop.
     else if(fillValid)
     begin
       int i;
