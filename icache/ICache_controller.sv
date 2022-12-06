@@ -82,6 +82,9 @@ module ICache_controller#(
   logic [`ICACHE_BYTES_IN_LINE_LOG-1:0] icScratchWrByte_d1;
   logic [7:0]                           icScratchWrData_d1;
   logic                                 icScratchWrEn_d1;
+ int misses = 0;
+
+   int hits = 0;
 
   always_ff @(posedge clk or posedge reset)
   begin
@@ -183,6 +186,13 @@ module ICache_controller#(
       miss_d1 <= miss & fetchReq_i & ~fillValid;
       miss_d2 <= miss_d1 & ~fillValid;
     end
+
+    if (miss)
+begin
+misses <= misses + 1;
+$display("MISSES: %d", misses);
+end
+
   end
   
   assign miss_pulse = miss_d1 & ~miss_d2;
@@ -283,6 +293,8 @@ module ICache_controller#(
   
       if (hit)
       begin
+hits <= hits + 1;
+$display("HITS: %d", hits);
         instValid[0]  = 1'b1;  // First slot is always valid irrespective of the offset
   
         `ifdef FETCH_TWO_WIDE
