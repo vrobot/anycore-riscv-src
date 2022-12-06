@@ -273,7 +273,23 @@ module ICache_controller#(
   
   
   ////////////////////////////////////////////////////////////
-  
+  int misses = 0;
+  int hits = 0;
+  always_ff @(posedge clk or posedge reset)
+   begin
+    if (reset)
+    begin
+    end
+    else if (miss)
+    begin misses <= misses + 1;
+    $display("MISSES: %d", misses);
+    end 
+    else if (hit)
+    begin 
+    hits <= hits + 1;
+    $display("HITS: %d", hits);
+    end 
+  end
   
   always_comb
   begin
