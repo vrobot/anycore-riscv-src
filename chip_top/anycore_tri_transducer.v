@@ -11,6 +11,7 @@ module anycore_tri_transducer(
     input [`ICACHE_BLOCK_ADDR_BITS-1:0] ic2mem_reqaddr_i,
     input                               ic2mem_reqvalid_i,
     output [`ICACHE_NUM_WAYS_LOG-1:0]                        ic2memReqWay_o,
+    output [1:0]                                             dc2memReqWay_o,
 
     input [`DCACHE_BLOCK_ADDR_BITS-1:0] dc2mem_ldaddr_i,
 
@@ -78,7 +79,7 @@ module anycore_tri_transducer(
 
     output                              mem2dc_invvalid_o,
     output [`DCACHE_INDEX_BITS-1:0]     mem2dc_invindex_o,
-    output [0:0]                        mem2dc_invway_o,
+    output [1:0]                        mem2dc_invway_o,
 
     output                              mem2ic_invvalid_o,
     output [`ICACHE_INDEX_BITS-1:0]     mem2ic_invindex_o,
@@ -105,6 +106,7 @@ wire [63:0] anycore_imiss_full_addr = ic2mem_reqaddr_i << (64-`ICACHE_BLOCK_ADDR
 wire [`ICACHE_NUM_WAYS_LOG-1:0] anycore_imiss_way = ic2memReqWay_o;
 // Sign extend to 64 bits
 //wire [63:0] anycore_store_full_addr = {{((64-`DCACHE_ST_ADDR_BITS)-3){dc2mem_staddr_i[`DCACHE_ST_ADDR_BITS-1]}}, (dc2mem_staddr_i << 3)};
+//do we need to do something here like we did for anycore_imiss_way?
 wire [63:0] anycore_store_full_addr = {{((64-`DCACHE_ST_ADDR_BITS)-3){dc2mem_staddr_i[`DCACHE_ST_ADDR_BITS-1]}}, (dc2mem_staddr_i)};
 wire [1:0] anycore_store_way = dc2mem_staddr_i[`DCACHE_INDEX_BITS-1:`DCACHE_INDEX_BITS-2-1];
 // Sign extend to 64 bits
@@ -416,9 +418,8 @@ end
 assign mem2dc_invvalid_o = signal_dcache_inval & ~dinvalrst_reg;
 assign mem2ic_invvalid_o = signal_icache_inval & ~iinvalrst_reg;
 //CHANGES
-assign mem2dc_invway_o = l15_transducer_inval_way_i;
+assign mem2dc_invway_o = dc2memReqWay_o;
 //assign mem2dc_invway_o = ic2memReqWay_o;
-//assign mem2dc_invway_o = mem2icInvWay_i;
 assign mem2dc_invindex_o = l15_transducer_inval_address_15_4_i[`DCACHE_INDEX_BITS+4-1:4];
 //assign mem2ic_invway_o = 1; //l15_transducer_inval_way_i;
 assign mem2ic_invway_o = ic2memReqWay_o;

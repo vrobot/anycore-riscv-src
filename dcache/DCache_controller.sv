@@ -54,6 +54,8 @@ module DCache_controller(
     input  [`DCACHE_BITS_IN_LINE-1:0]   mem2dcLdData_i,  // requested data
     input                               mem2dcLdValid_i, // indicates the requested data is ready
 
+    output logic [1:0]  dc2memReqWay_o,
+
     // cache-to-memory interface for stores
     output [`DCACHE_ST_ADDR_BITS-1:0]   dc2memStAddr_o,  // memory read address
     output [`SIZE_DATA-1:0]             dc2memStData_o,  // memory read address
@@ -62,7 +64,7 @@ module DCache_controller(
 
     input                               mem2dcInv_i,     // dcache invalidation
     input  [`DCACHE_INDEX_BITS-1:0]     mem2dcInvInd_i,  // dcache invalidation index
-    input  [0:0]                        mem2dcInvWay_i,  // dcache invalidation way (unused)
+    input  [1:0]                        mem2dcInvWay_i,  // dcache invalidation way (unused)
 
     output                              stbEmpty_o,      // Signals that there are no pending stores to be written to next level
 

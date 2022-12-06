@@ -103,7 +103,7 @@ module AnyCore_Piton(
 
 wire [`ICACHE_BLOCK_ADDR_BITS-1:0] ic2memReqAddr;    // memory read address
 wire                               ic2memReqValid;   // memory read enable
-wire  [`ICACHE_NUM_WAYS_LOG-1:0]                        ic2memReqWay;     // memory way 
+wire [`ICACHE_NUM_WAYS_LOG-1:0]                        ic2memReqWay;     // memory way 
 wire [`ICACHE_TAG_BITS-1:0]        mem2icTag;        // tag of the incoming data
 wire [`ICACHE_INDEX_BITS-1:0]      mem2icIndex;      // index of the incoming data
 wire [`ICACHE_BITS_IN_LINE-1:0]    mem2icData;       // requested data
@@ -116,6 +116,7 @@ wire  [`ICACHE_NUM_WAYS_LOG-1:0]                        mem2icInvWay;     // ica
 // cache-to-memory interface for Loads
 wire [`DCACHE_BLOCK_ADDR_BITS-1:0] dc2memLdAddr;  // memory read address
 wire                               dc2memLdValid; // memory read enable
+wire [1:0]  dc2memReqWay_o,
 
 // memory-to-cache interface for Loads
 wire [`DCACHE_TAG_BITS-1:0]     mem2dcLdTag;       // tag of the incoming datadetermine
@@ -131,7 +132,7 @@ wire                             dc2memStValid;
 
 wire                               mem2dcInv;     // dcache invalidation
 wire  [`DCACHE_INDEX_BITS-1:0]     mem2dcInvInd;  // dcache invalidation index
-wire  [0:0]                        mem2dcInvWay;  // dcache invalidation way (unused)
+wire  [1:0]                        mem2dcInvWay;  // dcache invalidation way (unused)
 
 wire                            mem2dcStComplete;
 wire                            mem2dcStStall;
@@ -474,6 +475,7 @@ Core_OOO coreTop(
   
     .dc2memLdAddr_o                      (dc2memLdAddr     ), // memory read address
     .dc2memLdValid_o                     (dc2memLdValid    ), // memory read enable
+    .dc2memReqWay_o                      (dc2memReqWay     ),
                                                             
     .mem2dcLdTag_i                       (mem2dcLdTag      ), // tag of the incoming datadetermine
     .mem2dcLdIndex_i                     (mem2dcLdIndex    ), // index of the incoming data
@@ -601,6 +603,8 @@ Core_OOO coreTop(
         .ic2mem_reqaddr_i                  (ic2memReqAddr),
         .ic2mem_reqvalid_i                 (ic2memReqValid),
         .ic2memReqWay_o                    (ic2memReqWay),
+        .dc2memReqWay_o                    (dc2memReqWay     ),
+        
 
         .dc2mem_ldaddr_i                   (dc2memLdAddr),
         .dc2mem_ldvalid_i                  (dc2memLdValid),
