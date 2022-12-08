@@ -217,12 +217,20 @@ module DCache_controller(
   // hit detection logic. hits are detected the cycle after ldEn_i goes high.
   // hit can stay high for multiple cycles if no new request comes (e.g. fetch
   // stalls)
-  //Do we need to duplicate this data as well? Did that for now but can change it back.
+
+  // CS 254:
+  // Erwan: Do we need to duplicate this data as well? Did that for now but can change it back.
+  // Rajan: Makes sense to me, since we want to separately check if each way has a hit
+  //        when doing loads
   logic                           ldHit;
   logic                           ldHit1;
   logic                           ldHit2;
   logic                           ldHit3;
   logic                           ldHit_total;
+
+  // TODO (Rajan): I can put this all the way up here, right? Since this is hardware, not software?J
+  assign ldHit_total = ldHit | ldHit1 | ldHit2 | ldHit3;
+  assign ldMiss = ~ldHit_total;
   
   
   // Muxing might be needed to account for the differing load sizes
@@ -266,9 +274,6 @@ module DCache_controller(
 //  		ldData_o = 32'hdeadbeef;
   end
 
-  // Note that this needs to handle loads and stores separately (unlike icache).
-  // Only handling stores for now, so that things will compile, but
-  // need to extend this for loads, too. That is critical.
   always_ff @(posedge clk)
   begin
     if (reset) 
@@ -279,14 +284,13 @@ module DCache_controller(
         RoundRobin[i] <= '0;
       end
     end 
-    // else if (miss)
-    else if (stMiss_o) 		// <--- Should it be this one? Or stbMiss? Or a total miss?
+    else if (ldMiss)
     begin
         int i;
         misses <= misses + 1;
         $display("MISSES: %d", misses);
-        RoundRobin[st_index] <= RoundRobin[st_index] + 1'b1;
-    end
+        RoundRobin[ld_index] <= RoundRobin[ld_index] + 1'b1;
+    end   // TODO (Rajan) Prob need the same for stMiss
     // else if (hit) 
     // begin
     //   int i;
@@ -589,8 +593,7 @@ module DCache_controller(
   assign  stHit_o1 = stHit1;
   assign  stHit_o2 = stHit2;
   assign  stHit_o3 = stHit3;
-  // CHANGE - We now declare stHit_total above
-  // assign  stHit_total = stHit_total;
+  assign  stHit_total = stHit_total;
 
   assign  stMiss_o = ~stHit_total & mem2dcStComplete_d1;
   
@@ -815,22 +818,28 @@ module DCache_controller(
   begin
     // No need to update to a line that is being replaced 
     // by a fill.
-    //duplicated logic here based on stHit
-    //should i duplicate more logic here apart form stHit and data_array?
+
+    // CS 254:
+    // Erwan: Duplicated logic here based on stHit
+    // should I duplicate more logic here apart from stHit and data_array?
+    //
+    // Rajan: Duplicating data_array def makes sense to me. Maybe we can
+    // get away with not duplicating stHit, since I think we might be able
+    // to decouple the store buffer hit detection logic from associativity
+    // stuff. After all, the stbuf logic looks like it uses the full address
+    // for comparison rather than splitting into tag/index/offset
+
+    // TODO (Rajan) We may potentially need to duplicate stHit, but
+    // lets see if we don't have to!
+
     if(stHit & ~((stbHeadIndex == fillIndex) & fillValid))
     begin
+      // TODO (Rajan) Only one way should get updated. How do we know what
+      // way corresponds to the stb head addr? This is probably where
+      // round robin comes in!!! :D :D I'm starting to get it
       data_array[stbHeadIndex]  <=  stbUpdateData;
-    end
-    else if(stHit1 & ~((stbHeadIndex == fillIndex) & fillValid))
-    begin
       data_array1[stbHeadIndex]  <=  stbUpdateData;
-    end
-    else if(stHit2 & ~((stbHeadIndex == fillIndex) & fillValid))
-    begin
       data_array2[stbHeadIndex]  <=  stbUpdateData;
-    end
-    else if(stHit3 & ~((stbHeadIndex == fillIndex) & fillValid))
-    begin
       data_array3[stbHeadIndex]  <=  stbUpdateData;
     end
 
