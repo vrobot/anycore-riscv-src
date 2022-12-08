@@ -116,7 +116,7 @@ wire  [`ICACHE_NUM_WAYS_LOG-1:0]                        mem2icInvWay;     // ica
 // cache-to-memory interface for Loads
 wire [`DCACHE_BLOCK_ADDR_BITS-1:0] dc2memLdAddr;  // memory read address
 wire                               dc2memLdValid; // memory read enable
-wire [1:0]  dc2memReqWay_o,
+wire [1:0]  dc2memReqWay_o;
 
 // memory-to-cache interface for Loads
 wire [`DCACHE_TAG_BITS-1:0]     mem2dcLdTag;       // tag of the incoming datadetermine

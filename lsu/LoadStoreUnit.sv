@@ -309,7 +309,7 @@ LSUDatapath datapath (
                                                    
   .mem2dcInv_i,     // dcache invalidation
   .mem2dcInvInd_i,  // dcache invalidation index
-  .mem2dcInvWay_i,    	        (mem2dcInvWay_i		),
+  .mem2dcInvWay_i     	        (mem2dcInvWay_i		),
 
   .mem2dcStComplete_i           (mem2dcStComplete_i ),
   .mem2dcStStall_i              (mem2dcStStall_i    ),

@@ -41,10 +41,10 @@ module DCache_controller(
     input  [`LDST_TYPES_LOG-1:0]        stSize_i,
     input  [`SIZE_DATA-1:0]             stData_i, 
     //input  [2**`DCACHE_WORD_BYTE_OFFSET_LOG-1:0]stByteEn_i, 
-    output                              stHit_o
-    output                              stHit_o1
-    output                              stHit_o2
-    output                              stHit_o3
+    output                              stHit_o,
+    output                              stHit_o1,
+    output                              stHit_o2,
+    output                              stHit_o3,
     output                              stHit_total,
 
 `ifdef DATA_CACHE
@@ -266,6 +266,9 @@ module DCache_controller(
 //  		ldData_o = 32'hdeadbeef;
   end
 
+  // Note that this needs to handle loads and stores separately (unlike icache).
+  // Only handling stores for now, so that things will compile, but
+  // need to extend this for loads, too. That is critical.
   always_ff @(posedge clk)
   begin
     if (reset) 
@@ -276,12 +279,13 @@ module DCache_controller(
         RoundRobin[i] <= '0;
       end
     end 
-    else if (miss) 
+    // else if (miss)
+    else if (stMiss_o) 		// <--- Should it be this one? Or stbMiss? Or a total miss?
     begin
         int i;
         misses <= misses + 1;
         $display("MISSES: %d", misses);
-        RoundRobin[pc_index] <= RoundRobin[pc_index] + 1'b1;
+        RoundRobin[st_index] <= RoundRobin[st_index] + 1'b1;
     end
     // else if (hit) 
     // begin
@@ -585,7 +589,8 @@ module DCache_controller(
   assign  stHit_o1 = stHit1;
   assign  stHit_o2 = stHit2;
   assign  stHit_o3 = stHit3;
-  assign  stHit_total = stHit_total;
+  // CHANGE - We now declare stHit_total above
+  // assign  stHit_total = stHit_total;
 
   assign  stMiss_o = ~stHit_total & mem2dcStComplete_d1;
   
