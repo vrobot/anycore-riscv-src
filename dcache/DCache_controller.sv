@@ -228,7 +228,7 @@ module DCache_controller(
   logic                           ldHit3;
   logic                           ldHit_total;
 
-  // TODO (Rajan): I can put this all the way up here, right? Since this is hardware, not software?J
+  // TODO (Rajan): I can put this all the way up here, right? Since this is hardware, not software?
   assign ldHit_total = ldHit | ldHit1 | ldHit2 | ldHit3;
   assign ldMiss = ~ldHit_total;
   
@@ -332,7 +332,7 @@ module DCache_controller(
   //does ldHit here need to be duplicated?
   assign miss = ~ldHit_total;
 
-  assign ldMiss_o = miss & ldEn_i; 
+  assign ldMiss_o = miss & ldEn_i;
   
   always_ff @(posedge clk or posedge reset)
   begin
@@ -964,17 +964,17 @@ module DCache_controller(
     st_cache_tag   = tag_array[stbHeadIndex];
     st_cache_valid = valid_array[stbHeadIndex];
 
-    st_cache_data  = data_array1[stbHeadIndex];
-    st_cache_tag   = tag_array1[stbHeadIndex];
-    st_cache_valid = valid_array1[stbHeadIndex];
+    st_cache_data1  = data_array1[stbHeadIndex];
+    st_cache_tag1   = tag_array1[stbHeadIndex];
+    st_cache_valid1 = valid_array1[stbHeadIndex];
 
-    st_cache_data  = data_array2[stbHeadIndex];
-    st_cache_tag   = tag_array2[stbHeadIndex];
-    st_cache_valid = valid_array2[stbHeadIndex];
+    st_cache_data2  = data_array2[stbHeadIndex];
+    st_cache_tag2   = tag_array2[stbHeadIndex];
+    st_cache_valid2 = valid_array2[stbHeadIndex];
 
-    st_cache_data  = data_array3[stbHeadIndex];
-    st_cache_tag   = tag_array3[stbHeadIndex];
-    st_cache_valid = valid_array3[stbHeadIndex];
+    st_cache_data3  = data_array3[stbHeadIndex];
+    st_cache_tag3   = tag_array3[stbHeadIndex];
+    st_cache_valid3 = valid_array3[stbHeadIndex];
   end
   
   // NOTE: SCRATCH MODE
