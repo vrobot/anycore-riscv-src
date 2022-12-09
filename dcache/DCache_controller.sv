@@ -593,7 +593,6 @@ module DCache_controller(
   assign  stHit_o1 = stHit1;
   assign  stHit_o2 = stHit2;
   assign  stHit_o3 = stHit3;
-  assign  stHit_total = stHit_total;
 
   assign  stMiss_o = ~stHit_total & mem2dcStComplete_d1;
   
@@ -749,7 +748,10 @@ module DCache_controller(
   end   
   ////////////////////////////////////////////////////////////
   
-  //do I need to duplicate this data? maybe store the ld data depending on the way of a hit or something?
+  // TODO (CS 254)
+  // Erwan: Do I need to duplicate this data? maybe store the ld data depending on the way of a hit or something?
+  // Rajan: I think what's happening is that ld_cache_data should hold just a single cache line. However,
+  // the data_array is what should get duplicated.
   assign ldData = stbHit ? stbData[latestMatch] : ld_cache_data[ld_offset*`SIZE_DATA +: `SIZE_DATA];
   assign ldData1 = stbHit ? stbData[latestMatch] : ld_cache_data1[ld_offset*`SIZE_DATA +: `SIZE_DATA];
   assign ldData2 = stbHit ? stbData[latestMatch] : ld_cache_data2[ld_offset*`SIZE_DATA +: `SIZE_DATA];
@@ -775,7 +777,13 @@ module DCache_controller(
   
   always_comb
   begin
+    dc2memReqWay_o = RoundRobin[ld_index];
+    $display("RoundRobin at index %d: %d", ld_index, RoundRobin[ld_index]);
+
     ld_cache_data  = data_array[ld_index];
+    $display("ld_cache_data %d", data_array[ld_index]);
+    $display("stData %d", stData);
+
     ld_cache_tag   = tag_array[ld_index];
     ld_cache_valid = valid_array[ld_index];
 
@@ -807,9 +815,19 @@ module DCache_controller(
     else
     begin
       if(stbHit)
+      begin
+        // TODO (CS 254) Do we need to duplicate this, too? If there's a store buffer
+        //               hit, can we get away with doing nothing? 
         ldHit = (ldSize_i <= stbStSize[latestMatch]) & ldEn_i;  // Must indicate ldHit only when there's a valid ldEn
+      end
       else
-        ldHit = (ld_cache_tag == ld_tag) & ld_cache_valid & ldEn_i; 
+      begin
+        // (CS 254) Duplicated ldHit logic here.
+        ldHit = (ld_cache_tag == ld_tag) & ld_cache_valid & ldEn_i;
+        ldHit1 = (ld_cache_tag1 == ld_tag) & ld_cache_valid1 & ldEn_i;
+        ldHit2 = (ld_cache_tag2 == ld_tag) & ld_cache_valid2 & ldEn_i;
+        ldHit3 = (ld_cache_tag3 == ld_tag) & ld_cache_valid3 & ldEn_i;
+      end
     end
   end
   
@@ -822,30 +840,44 @@ module DCache_controller(
     // CS 254:
     // Erwan: Duplicated logic here based on stHit
     // should I duplicate more logic here apart from stHit and data_array?
-    //
-    // Rajan: Duplicating data_array def makes sense to me. Maybe we can
-    // get away with not duplicating stHit, since I think we might be able
-    // to decouple the store buffer hit detection logic from associativity
-    // stuff. After all, the stbuf logic looks like it uses the full address
-    // for comparison rather than splitting into tag/index/offset
 
-    // TODO (Rajan) We may potentially need to duplicate stHit, but
-    // lets see if we don't have to!
-
+    $display("Hits: [%d, %d, %d, %d]", ldHit, ldHit1, ldHit2, ldHit3);
+    $display("ldData: %d", ldData);
+    $display("ld_index: %d", ld_index);
     if(stHit & ~((stbHeadIndex == fillIndex) & fillValid))
     begin
-      // TODO (Rajan) Only one way should get updated. How do we know what
-      // way corresponds to the stb head addr? This is probably where
-      // round robin comes in!!! :D :D I'm starting to get it
       data_array[stbHeadIndex]  <=  stbUpdateData;
+    end
+    else if(stHit1 & ~((stbHeadIndex == fillIndex) & fillValid))
+    begin
       data_array1[stbHeadIndex]  <=  stbUpdateData;
+    end
+    else if(stHit2 & ~((stbHeadIndex == fillIndex) & fillValid))
+    begin
       data_array2[stbHeadIndex]  <=  stbUpdateData;
+    end
+    else if(stHit3 & ~((stbHeadIndex == fillIndex) & fillValid))
+    begin
       data_array3[stbHeadIndex]  <=  stbUpdateData;
     end
 
+
+    // CS 254: Brought over from icache controller
+    $display("%d", fillData);
+    if (reset)
+    begin
+      int i;
+      for(i = 0; i < `DCACHE_NUM_LINES; i++)
+        begin
+        data_array[i] <= 0;
+        data_array1[i] <= 0;
+        data_array2[i] <= 0;
+        data_array3[i] <= 0;
+        end
+    end
     // Fill to the same line gets priority over store update
     // as the block being stored to is being overwritten anyway.
-    if(fillValid)
+    else if(fillValid)
     begin
       if (mem2dcInvWay_i == 2'b00)
       begin
@@ -979,8 +1011,15 @@ module DCache_controller(
   
   // NOTE: SCRATCH MODE
   // If in scratch mode, store hits whenever there is a store to be done.
-  //scratch mode, won't modify this stHit variable right now?
+  // TODO (CS 254) - Do we need to duplicate stbHeadTag?
+  // Note: stbHeadTag is a component of the address at the head of the store buffer (basically, the write address
+  // corresponding to the sw instruction that just executed). Since it's basically the equivalent to the input, it
+  // doesn't need to be duplicated. Therefore, this section should be good!
   assign stHit = dcScratchModeEn_d1 ? stEn_i : (((st_cache_tag == stbHeadTag) & st_cache_valid) & mem2dcStComplete_d1);
+  assign stHit1 = dcScratchModeEn_d1 ? stEn_i : (((st_cache_tag1 == stbHeadTag) & st_cache_valid1) & mem2dcStComplete_d1);
+  assign stHit2 = dcScratchModeEn_d1 ? stEn_i : (((st_cache_tag2 == stbHeadTag) & st_cache_valid2) & mem2dcStComplete_d1);
+  assign stHit3 = dcScratchModeEn_d1 ? stEn_i : (((st_cache_tag3 == stbHeadTag) & st_cache_valid3) & mem2dcStComplete_d1);
+  assign stHit_total = stHit | stHit1 | stHit2 | stHit3;
  
   always_comb
   begin
