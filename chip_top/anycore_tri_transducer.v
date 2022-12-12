@@ -104,14 +104,14 @@ wire [63:0] anycore_imiss_full_addr = ic2mem_reqaddr_i << (64-`ICACHE_BLOCK_ADDR
 //CHANGES
 //wire [1:0] anycore_imiss_way = ic2mem_reqaddr_i[`ICACHE_INDEX_BITS-1:`ICACHE_INDEX_BITS-2-1];
 wire [`ICACHE_NUM_WAYS_LOG-1:0] anycore_imiss_way = ic2memReqWay_o;
+
 // Sign extend to 64 bits
 //wire [63:0] anycore_store_full_addr = {{((64-`DCACHE_ST_ADDR_BITS)-3){dc2mem_staddr_i[`DCACHE_ST_ADDR_BITS-1]}}, (dc2mem_staddr_i << 3)};
-//do we need to do something here like we did for anycore_imiss_way?
 wire [63:0] anycore_store_full_addr = {{((64-`DCACHE_ST_ADDR_BITS)-3){dc2mem_staddr_i[`DCACHE_ST_ADDR_BITS-1]}}, (dc2mem_staddr_i)};
-wire [1:0] anycore_store_way = dc2mem_staddr_i[`DCACHE_INDEX_BITS-1:`DCACHE_INDEX_BITS-2-1];
+wire [1:0] anycore_store_way = dc2memReqWay_o; // dc2mem_staddr_i[`DCACHE_INDEX_BITS-1:`DCACHE_INDEX_BITS-2-1];
 // Sign extend to 64 bits
 wire [63:0] anycore_load_full_addr = {{((64-`DCACHE_BLOCK_ADDR_BITS)-4){dc2mem_ldaddr_i[`DCACHE_BLOCK_ADDR_BITS-1]}}, (dc2mem_ldaddr_i << 4)};
-wire [1:0] anycore_load_way = dc2mem_ldaddr_i[`DCACHE_INDEX_BITS-1:`DCACHE_INDEX_BITS-2-1];
+wire [1:0] anycore_load_way = dc2memReqWay_o; // dc2mem_ldaddr_i[`DCACHE_INDEX_BITS-1:`DCACHE_INDEX_BITS-2-1];
 
 wire [63:0] anycore_dc2mem_stdata_flipped = {dc2mem_stdata_i[7:0], dc2mem_stdata_i[15:8], dc2mem_stdata_i[23:16], dc2mem_stdata_i[31:24], dc2mem_stdata_i[39:32], dc2mem_stdata_i[47:40], dc2mem_stdata_i[55:48], dc2mem_stdata_i[63:56]};
 //wire [63:0] anycore_dc2mem_stdata_flipped = dc2mem_stdata_i;

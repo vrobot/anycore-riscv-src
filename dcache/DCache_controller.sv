@@ -154,6 +154,7 @@ module DCache_controller(
   logic [`SIZE_DATA-1:0]             ldData1;
   logic [`SIZE_DATA-1:0]             ldData2;
   logic [`SIZE_DATA-1:0]             ldData3;
+  logic [`SIZE_DATA-1:0]             ldData_from_hit;   // Maps to whichever ldData corresponds to a hit
 
   // store pc segments /////////////////////////////////////////////
   logic [`DCACHE_OFFSET_BITS-1:0]    st_offset;
@@ -223,12 +224,11 @@ module DCache_controller(
   // Rajan: Makes sense to me, since we want to separately check if each way has a hit
   //        when doing loads
   logic                           ldHit;
-  logic                           ldHit1;
-  logic                           ldHit2;
-  logic                           ldHit3;
+  logic                           ldHit1 = 0;
+  logic                           ldHit2 = 0;
+  logic                           ldHit3 = 0;
   logic                           ldHit_total;
 
-  // TODO (Rajan): I can put this all the way up here, right? Since this is hardware, not software?
   assign ldHit_total = ldHit | ldHit1 | ldHit2 | ldHit3;
   assign ldMiss = ~ldHit_total;
   
@@ -246,27 +246,27 @@ module DCache_controller(
   	case (ldSize_i)
   		`LDST_BYTE: 
        		begin
-			ldData_o = (ldData >> {ldAddr_i[2:0], 3'h0}) & 64'h0000_0000_0000_00FF;
+			ldData_o = (ldData_from_hit >> {ldAddr_i[2:0], 3'h0}) & 64'h0000_0000_0000_00FF;
   			if(ldSign_i)
          		 	ldData_o = {{56{ldData_o[7]}},ldData_o[7:0]};
        		end
   		`LDST_HALF_WORD: 
       		begin
-			ldData_o = (ldData >> {ldAddr_i[2:1], 4'h0}) & 64'h0000_0000_0000_FFFF;
+			ldData_o = (ldData_from_hit >> {ldAddr_i[2:1], 4'h0}) & 64'h0000_0000_0000_FFFF;
 			if(ldSign_i)
           			ldData_o = {{48{ldData_o[15]}},ldData_o[15:0]};
 		end
   
   		`LDST_WORD:
   		begin
-			ldData_o = (ldData >> {ldAddr_i[2], 5'h0}) & 64'h0000_0000_FFFF_FFFF;
+			ldData_o = (ldData_from_hit >> {ldAddr_i[2], 5'h0}) & 64'h0000_0000_FFFF_FFFF;
 			 if(ldSign_i)
           			ldData_o = {{32{ldData_o[31]}},ldData_o[31:0]};
 
 		end
 
 		`LDST_DOUBLE_WORD:
-			ldData_o = ldData;
+			ldData_o = ldData_from_hit;
   	endcase
   
     // If trying to access heap region
@@ -284,19 +284,19 @@ module DCache_controller(
         RoundRobin[i] <= '0;
       end
     end 
-    else if (ldMiss)
+    else if (ldMiss | stMiss_o)
     begin
         int i;
         misses <= misses + 1;
-        $display("MISSES: %d", misses);
+        $display("MISSES (dcache): %d", misses);
         RoundRobin[ld_index] <= RoundRobin[ld_index] + 1'b1;
-    end   // TODO (Rajan) Prob need the same for stMiss
-    // else if (hit) 
-    // begin
-    //   int i;
-    //   hits <= hits + 1;
-    //   $display("HITS: %d", hits);
-    // end
+    end   
+    else if (ldHit_total) 
+    begin
+      int i;
+      hits <= hits + 1;
+      $display("HITS (dcache): %d", hits);
+    end
   end
   
   
@@ -328,8 +328,6 @@ module DCache_controller(
   logic                               miss_pulse;
   logic                               missUnderMiss;
   
-  //need to duplicate ~ldHit and ~ldHit_o logic.
-  //does ldHit here need to be duplicated?
   assign miss = ~ldHit_total;
 
   assign ldMiss_o = miss & ldEn_i;
@@ -504,6 +502,7 @@ module DCache_controller(
   logic [`DCACHE_TAG_BITS-1:0]      st_cache_tag3;
   logic [`DCACHE_BITS_IN_LINE-1:0]  st_cache_data3;
   logic                             st_cache_valid3;
+  logic [`DCACHE_BITS_IN_LINE-1:0]  st_cache_data_from_hit;
   logic [`DCACHE_BITS_IN_LINE-1:0]  stbUpdateData;
   
   logic                             stHit;
@@ -748,10 +747,9 @@ module DCache_controller(
   end   
   ////////////////////////////////////////////////////////////
   
-  // TODO (CS 254)
+  // (CS 254)
   // Erwan: Do I need to duplicate this data? maybe store the ld data depending on the way of a hit or something?
-  // Rajan: I think what's happening is that ld_cache_data should hold just a single cache line. However,
-  // the data_array is what should get duplicated.
+  // Rajan: Whichever ldData gets selected to be the cache's output should depend on the input way
   assign ldData = stbHit ? stbData[latestMatch] : ld_cache_data[ld_offset*`SIZE_DATA +: `SIZE_DATA];
   assign ldData1 = stbHit ? stbData[latestMatch] : ld_cache_data1[ld_offset*`SIZE_DATA +: `SIZE_DATA];
   assign ldData2 = stbHit ? stbData[latestMatch] : ld_cache_data2[ld_offset*`SIZE_DATA +: `SIZE_DATA];
@@ -778,12 +776,12 @@ module DCache_controller(
   always_comb
   begin
     dc2memReqWay_o = RoundRobin[ld_index];
-    $display("RoundRobin at index %d: %d", ld_index, RoundRobin[ld_index]);
 
+    // (CS 254) Although it seems like we would want to switch based on
+    // the invWay coming in, we actually need to compute all 4 sets of
+    // data below. After all, if there isn't a hit, the data for that
+    // way won't get updated anyway.
     ld_cache_data  = data_array[ld_index];
-    $display("ld_cache_data %d", data_array[ld_index]);
-    $display("stData %d", stData);
-
     ld_cache_tag   = tag_array[ld_index];
     ld_cache_valid = valid_array[ld_index];
 
@@ -804,20 +802,22 @@ module DCache_controller(
   begin
     // If hit in store buffer, ignore the cache array hit as STB has latest value.
     // If hit in store buffer, it is a miss if the sizes are not compatible.
-    //scratch mode so won't modify the ldHit stuff in here for now, is this necessary?
-    //it seems that apart from being assigned to the miss and being declared this is the only spot 
-    //where ldHit is being used so does it need to be duplicated at all?
+    
+    // CS 254
+    // Erwan: Scratch mode so won't modify the ldHit stuff in here for now, is this necessary?
+    //        it seems that apart from being assigned to the miss and being declared this is the only spot 
+    //        where ldHit is being used so does it need to be duplicated at all?
+    // Rajan: We don't need to worry about associativity during scratch mode, so we can leave it.
     ldHit = 1'b0;
     // NOTE: SCRATCH MODE
-    //should i update this logic here, even if it says its in scratch mode?
     if(dcScratchModeEn_d1)
       ldHit = ldEn_i;
     else
     begin
       if(stbHit)
       begin
-        // TODO (CS 254) Do we need to duplicate this, too? If there's a store buffer
-        //               hit, can we get away with doing nothing? 
+        // (CS 254) When there's a store buffer hit, the cache isn't used, so we don't
+        //          need to duplicate this
         ldHit = (ldSize_i <= stbStSize[latestMatch]) & ldEn_i;  // Must indicate ldHit only when there's a valid ldEn
       end
       else
@@ -831,6 +831,12 @@ module DCache_controller(
     end
   end
   
+  always_comb
+  begin
+    // This will be the data that gets output from the cache. Each ldData<i> corresponds to a way
+    // and each hit<i> is true when that way has a hit (based on the tag)
+    ldData_from_hit = ldHit ? ldData : ldHit1 ? ldData1 : ldHit2 ? ldData2 : ldHit3 ? ldData3 : ldData;
+  end
   
   always_ff @(posedge clk)
   begin
@@ -840,10 +846,7 @@ module DCache_controller(
     // CS 254:
     // Erwan: Duplicated logic here based on stHit
     // should I duplicate more logic here apart from stHit and data_array?
-
-    $display("Hits: [%d, %d, %d, %d]", ldHit, ldHit1, ldHit2, ldHit3);
-    $display("ldData: %d", ldData);
-    $display("ld_index: %d", ld_index);
+    // Rajan: No need.
     if(stHit & ~((stbHeadIndex == fillIndex) & fillValid))
     begin
       data_array[stbHeadIndex]  <=  stbUpdateData;
@@ -863,17 +866,16 @@ module DCache_controller(
 
 
     // CS 254: Brought over from icache controller
-    $display("%d", fillData);
     if (reset)
     begin
       int i;
       for(i = 0; i < `DCACHE_NUM_LINES; i++)
-        begin
+      begin
         data_array[i] <= 0;
         data_array1[i] <= 0;
         data_array2[i] <= 0;
         data_array3[i] <= 0;
-        end
+      end
     end
     // Fill to the same line gets priority over store update
     // as the block being stored to is being overwritten anyway.
@@ -938,19 +940,19 @@ module DCache_controller(
     begin
       if (mem2dcInvWay_i == 2'b00)
       begin
-        valid_array[mem2dcInvWay_i] <= 1'b0;
+        valid_array[mem2dcInvInd_i] <= 1'b0;
       end
       else if (mem2dcInvWay_i == 2'b01)
       begin
-        valid_array1[mem2dcInvWay_i] <= 1'b0;
+        valid_array1[mem2dcInvInd_i] <= 1'b0;
       end
       else if (mem2dcInvWay_i == 2'b10)
       begin
-        valid_array2[mem2dcInvWay_i] <= 1'b0;
+        valid_array2[mem2dcInvInd_i] <= 1'b0;
       end
       else if (mem2dcInvWay_i == 2'b11)
       begin
-        valid_array3[mem2dcInvWay_i] <= 1'b0;
+        valid_array3[mem2dcInvInd_i] <= 1'b0;
       end
     end
     else if(fillValid)
@@ -991,7 +993,6 @@ module DCache_controller(
 
   always_comb
   begin
-    //do I need to duplicate more logic here?
     st_cache_data  = data_array[stbHeadIndex];
     st_cache_tag   = tag_array[stbHeadIndex];
     st_cache_valid = valid_array[stbHeadIndex];
@@ -1011,21 +1012,18 @@ module DCache_controller(
   
   // NOTE: SCRATCH MODE
   // If in scratch mode, store hits whenever there is a store to be done.
-  // TODO (CS 254) - Do we need to duplicate stbHeadTag?
-  // Note: stbHeadTag is a component of the address at the head of the store buffer (basically, the write address
-  // corresponding to the sw instruction that just executed). Since it's basically the equivalent to the input, it
-  // doesn't need to be duplicated. Therefore, this section should be good!
   assign stHit = dcScratchModeEn_d1 ? stEn_i : (((st_cache_tag == stbHeadTag) & st_cache_valid) & mem2dcStComplete_d1);
   assign stHit1 = dcScratchModeEn_d1 ? stEn_i : (((st_cache_tag1 == stbHeadTag) & st_cache_valid1) & mem2dcStComplete_d1);
   assign stHit2 = dcScratchModeEn_d1 ? stEn_i : (((st_cache_tag2 == stbHeadTag) & st_cache_valid2) & mem2dcStComplete_d1);
   assign stHit3 = dcScratchModeEn_d1 ? stEn_i : (((st_cache_tag3 == stbHeadTag) & st_cache_valid3) & mem2dcStComplete_d1);
   assign stHit_total = stHit | stHit1 | stHit2 | stHit3;
+  assign st_cache_data_from_hit = stHit ? st_cache_data : stHit1 ? st_cache_data1 : stHit2 ? st_cache_data2 : stHit3 ? st_cache_data3 : st_cache_data;
  
   always_comb
   begin
       //Most likely also need to add some logic here?
       int i,j;
-      stbUpdateData = st_cache_data;
+      stbUpdateData = st_cache_data_from_hit;
       
       // Merge received data with the latest store data byte by byte
       for(i=0;i<`DCACHE_WORDS_IN_LINE;i++)
